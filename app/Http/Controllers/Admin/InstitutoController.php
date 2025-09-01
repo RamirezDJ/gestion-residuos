@@ -78,7 +78,7 @@ class InstitutoController extends Controller
         session()->flash('swal', [
             'icon' => 'success',
             'title' => 'Hecho!',
-            'text' => 'La universidad se ha creado con exito',
+            'text' => 'El instituto se ha creado con exito',
         ]);
 
         return redirect()->route('admin.institutos.edit', $instituto);
