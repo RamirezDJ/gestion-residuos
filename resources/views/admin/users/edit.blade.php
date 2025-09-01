@@ -1,31 +1,33 @@
 <x-admin-layout :breadcrumb="[
     [
         'name' => 'Home',
-        'url' => route('admin.dashboard')
-    ], [
+        'url' => route('admin.dashboard'),
+    ],
+    [
         'name' => 'Usuarios',
-        'url' => route('admin.users.index')
-    ], [
-        'name' => 'Editar Usuario'
-    ]
+        'url' => route('admin.users.index'),
+    ],
+    [
+        'name' => 'Editar Usuario',
+    ],
 ]">
 
     <div class="bg-white rounded shadow-lg p-6">
 
-        <form action="{{route('admin.users.update', $user)}}" method="POST">
+        <form action="{{ route('admin.users.update', $user) }}" method="POST">
 
             @csrf
 
             @method('PUT')
 
-            <x-validation-errors class="mb-4"/>
+            <x-validation-errors class="mb-4" />
 
             <div class="mb-4">
                 <X-label>
                     Nombre
                 </X-label>
 
-                <x-input name="name" value="{{old('name', $user->name)}}" class="w-full" />
+                <x-input name="name" value="{{ old('name', $user->name) }}" class="w-full" />
             </div>
 
             <div class="mb-4">
@@ -33,7 +35,7 @@
                     Email
                 </X-label>
 
-                <x-input type="email" name="email" value="{{old('email', $user->email)}}" class="w-full" />
+                <x-input type="email" name="email" value="{{ old('email', $user->email) }}" class="w-full" />
             </div>
 
             <div class="mb-4">
@@ -54,12 +56,14 @@
 
             <div class="mb-4">
                 <x-label class="mb-1">
-                    Universidad perteneciente
+                    Instituto al que perteneciente
                 </x-label>
 
                 <x-select class="w-full" name="instituto_id">
+                    <option value="">Seleccione un instituto</option> <!-- Para que no seleccione ninguno por defecto -->
+                    <option value="crear">NUEVO INSTITUTO</option> <!-- Permita al crear un registro vacio en instituto -->
                     @foreach ($institutos as $instituto)
-                        <option @selected(old('instituto_id', $user->instituto_id)==$instituto->id) value="{{ $instituto->id }}">
+                        <option value="{{ $instituto->id }}">
                             {{ $instituto->nombre }}
                         </option>
                     @endforeach
@@ -69,14 +73,13 @@
             <div class="mb-4">
                 <ul>
                     @foreach ($roles as $role)
-                    <li>
-                        <label>
-                            {{-- Verifica si el id de los roles se encuentra en los roles del usuario para activar el checkbox --}}
-                            <x-checkbox name="roles[]" value="{{$role->id}}" :checked="in_array($role->id, old('roles', $user->roles->pluck('id')->toArray()))" />
-                            {{$role->name}}
-                        </label>
-                    </li>
-
+                        <li>
+                            <label>
+                                {{-- Verifica si el id de los roles se encuentra en los roles del usuario para activar el checkbox --}}
+                                <x-checkbox name="roles[]" value="{{ $role->id }}" :checked="in_array($role->id, old('roles', $user->roles->pluck('id')->toArray()))" />
+                                {{ $role->name }}
+                            </label>
+                        </li>
                     @endforeach
                 </ul>
             </div>

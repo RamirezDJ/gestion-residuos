@@ -32,6 +32,7 @@ class RolesAndPermissionsSeeder extends Seeder
         Permission::create(['name' => 'Acceso a Predicciones']);
         Permission::create(['name' => 'Acceso a Evidencias de Generación']);
         Permission::create(['name' => 'Acceso a Meta Anual']);
+        Permission::create(['name' => 'Crear nuevo instituto']);
 
         // update cache to know about the newly created permissions (required if using WithoutModelEvents in seeders)
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
@@ -55,8 +56,8 @@ class RolesAndPermissionsSeeder extends Seeder
                 'Acceso a Zonas',
                 'Acceso a Areas',
                 'Acceso a Subproductos',
-                'Gestion de Usuarios',
-                'Gestion de MiTecnológico'
+                'Gestion de MiTecnológico',
+                'Crear nuevo instituto'
             ]);
 
         $role = Role::create(['name' => 'Capturista'])

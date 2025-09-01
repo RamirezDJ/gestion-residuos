@@ -7,6 +7,8 @@ use App\Models\Institutos;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Spatie\Permission\Models\Role;
+use Illuminate\Support\Facades\Hash;
+
 
 class UserController extends Controller
 {
@@ -66,20 +68,34 @@ class UserController extends Controller
             'name' => 'required|string|max:255',
             'email' => "required|string|email|max:255|unique:users,email,{$user->id}",
             'password' => 'nullable|string|min:8|confirmed',
-            'instituto_id' => 'required|exists:institutos,id',
+            'instituto_id' => 'required',
         ]);
+
+        $instituto_id = $request->instituto_id;
 
         $user->name = $request->name;
         $user->email = $request->email;
         $user->instituto_id = $request->instituto_id;
 
-        if ($user->password) {
-            $user->password = bcrypt($request->password);
+        if ($instituto_id === 'crear') {
+            $instituto = \App\Models\Institutos::create([
+                'nombre' => 'INSTITUTO PENDIENTE POR ASIGNAR',
+                'direccion' => 'DIRECCION POR ASIGNAR',
+            ]);
+            $instituto_id = $instituto->id;
+        }
+
+        $user->name = $request->name;
+        $user->email = $request->email;
+        $user->instituto_id = $instituto_id;
+
+        if ($request->filled('password')) {
+            $user->password = Hash::make($request->password);
         }
 
         $user->save();
 
-        // Para asignar los roles, accedemos a la relacion y se sincroniza para guardar los roles al usuario
+        // Se asignar los roles, accedemos a la relacion y se sincroniza para guardar los roles al usuario
         $user->roles()->sync($request->roles);
 
         session()->flash('swal', [
