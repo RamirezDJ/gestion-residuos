@@ -18,10 +18,11 @@ class Area extends Model
 
     // Relacion uno a muchos inversa a nivel de eloquent
 
-    public function instituto()
+    public function scopeForUserInstituto($query)
     {
-        return $this->belongsTo(Institutos::class);
+        return $query->where('instituto_id', auth()->user()->instituto_id);
     }
+
 
 
     // Relacion uno a muchos entre areas y gen semanal - Recordar que un area puede estar asociada a varias zonas en la tabla intermedia 

@@ -14,8 +14,9 @@ class AreaController extends Controller
      */
     public function index()
     {
-        // Llamamos a todos los datos que hay en la tabla zonas
-        $areas = Area::all();
+        $instituto = auth()->user()->instituto;
+
+        $areas = Area::where('instituto_id', $instituto->id)->get();
 
         return view('admin.areas.index', compact('areas'));
     }

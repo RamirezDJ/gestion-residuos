@@ -15,11 +15,14 @@ class ZonaController extends Controller
      */
     public function index()
     {
-        // Llamamos a todos los datos que hay en la tabla zonas
-        $zonas = Zona::all();
+        $instituto = auth()->user()->instituto; // Instituto del usuario logueado
+
+        // Solo las zonas asociadas a ese instituto
+        $zonas = Zona::where('instituto_id', $instituto->id)->get();
 
         return view('admin.zonas.index', compact('zonas'));
     }
+
 
     /**
      * Show the form for creating a new resource.

@@ -55,15 +55,25 @@
             </div>
 
             <div class="mb-4">
-                <x-label class="mb-1">
-                    Instituto al que perteneciente
-                </x-label>
+                <p class="text-sm text-gray-500 mb-2">
+                    Este usuario actualmente pertenece a:
+                </p>
 
                 <x-select class="w-full" name="instituto_id">
-                    <option value="">Seleccione un instituto</option> <!-- Para que no seleccione ninguno por defecto -->
-                    <option value="crear">NUEVO INSTITUTO</option> <!-- Permita al crear un registro vacio en instituto -->
+                    <!-- Para que no seleccione ninguno por defecto -->
+                    <option value="" disabled {{ old('instituto_id', $user->instituto_id) ? '' : 'selected' }}
+                        class="text-gray-400 opacity-60">
+                        POR ASIGANAR INSTITUTO
+                    </option>
+
+                    <!-- Permita al crear un registro vacio en instituto -->
+                    <option value="crear" class="font-semibold" {{ old('instituto_id') == 'crear' ? 'selected' : '' }}>
+                        NUEVO INSTITUTO
+                    </option>
+
                     @foreach ($institutos as $instituto)
-                        <option value="{{ $instituto->id }}">
+                        <option value="{{ $instituto->id }}"
+                            {{ old('instituto_id', $user->instituto_id) == $instituto->id ? 'selected' : '' }}>
                             {{ $instituto->nombre }}
                         </option>
                     @endforeach

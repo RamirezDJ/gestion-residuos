@@ -79,7 +79,7 @@ class UserController extends Controller
 
         if ($instituto_id === 'crear') {
             $instituto = \App\Models\Institutos::create([
-                'nombre' => 'INSTITUTO PENDIENTE POR ASIGNAR',
+                'nombre' => 'PENDIENTE POR ASIGNAR NOMBRE',
                 'direccion' => 'DIRECCION POR ASIGNAR',
             ]);
             $instituto_id = $instituto->id;

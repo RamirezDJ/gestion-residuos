@@ -7,12 +7,12 @@
                 'icon' => 'fa-solid fa-gauge-high',
                 'can' => ['Acceso a Administración']
             ], [
-                'name' => 'Zonas de la universidad',
+                'name' => 'Zonas del instituto',
                 'url' => route('admin.zonas.index'),
                 'active' => request()->routeIs('admin.zonas.*'),
                 'icon' => 'fa-solid fa-flag',
             ], [
-                'name' => 'Areas de la universidad',
+                'name' => 'Areas del instituto',
                 'url' => route('admin.areas.index'),
                 'active' => request()->routeIs('admin.areas.*'),
                 'icon' => 'fa-solid fa-monument',
@@ -41,10 +41,10 @@
                 'icon' => 'fa-solid fa-users',
                 'can' => ['Gestion de Usuarios']
             ], [
-                'name' => 'Mi tecnológico',
+                'name' => 'Mi instituto',
                 'url' => route('admin.institutos.index'),
                 'active' => request()->routeIs('admin.institutos.*'),
-                'icon' => 'fa-solid fa-school',
+                'icon' => 'fa-solid fa-building',
                 'can' => ['Gestion de Usuarios']
             ],
             

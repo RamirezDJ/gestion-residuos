@@ -20,8 +20,9 @@ class Zona extends Model
 
     public function instituto()
     {
-        return $this->belongsTo(Institutos::class);
+        return $this->belongsTo(Instituto::class, 'instituto_id');
     }
+
 
     /**
      * Relación muchos a muchos con Area a través de la tabla zonas_areas.
