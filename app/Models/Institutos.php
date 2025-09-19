@@ -12,6 +12,8 @@ class Institutos extends Model
     /** @use HasFactory<\Database\Factories\InstitutosFactory> */
     use HasFactory;
 
+    protected $table = 'institutos';
+
     protected $fillable = [
         'nombre',
         'descripcion',

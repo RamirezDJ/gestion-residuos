@@ -42,13 +42,11 @@
                     Universidad perteneciente
                 </x-label>
 
-                <x-select class="w-full" name="instituto_id" readonly>
-                    @foreach ($institutos as $instituto)
-                        <option @selected(old('instituto_id') == $instituto->id) value="{{ $instituto->id }}">
-                            {{ $instituto->nombre }}
-                        </option>
-                    @endforeach
-                </x-select>
+                <p class="text-gray-700 font-medium">
+                    {{ auth()->user()->instituto?->nombre ?? 'Ninguno' }}
+                </p>
+                
+                <input type="hidden" name="instituto_id" value="{{ auth()->user()->instituto_id }}">
             </div>
 
             <div class="flex justify-end">
