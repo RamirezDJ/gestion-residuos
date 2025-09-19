@@ -19,7 +19,7 @@
                                     class="w-32 h-32 bg-gray-300 rounded-full mb-4 shrink-0">
                                 </img>
                                 <h1 class="text-xl font-bold">Icono</h1>
-                                <p class="text-gray-700">Mi Tecnológico</p>
+                                <p class="text-gray-700">Mi Instituto</p>
                                 <div class="mt-6 flex flex-wrap gap-4 justify-center">
                                     <a href="{{ route('admin.institutos.edit', $instituto) }}"
                                         class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded">Editar</a>
@@ -44,7 +44,7 @@
                     </div>
                     <div class="col-span-4 sm:col-span-9 2xl:col-span-10">
                         <div class="bg-white shadow rounded-lg p-6">
-                            <h2 class="text-xl font-bold mb-4">Sobre el {{ $instituto->nombre }}</h2>
+                            <h2 class="text-xl font-bold mb-4">Acerca de {{ $instituto->nombre }}</h2>
                             @if ($instituto->descripcion != null)
                                 <p class="text-gray-700">
                                     {{ $instituto->descripcion }}

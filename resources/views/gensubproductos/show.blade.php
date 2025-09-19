@@ -11,7 +11,7 @@
                                 Datos Generados
                             </h3>
                             <p class="mt-1 max-w-2xl text-sm text-gray-500">
-                                Resumen de los datos generados en la universidad.
+                                Resumen de los datos generados del instituto.
                             </p>
                         </div>
                         <div class="border-t border-gray-200 px-3 py-5 sm:p-0">

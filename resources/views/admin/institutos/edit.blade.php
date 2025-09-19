@@ -32,7 +32,7 @@
                                 <div class="mb-4">
                                     <label class="bg-gray-100 px-4 py-2 rounded-lg cursor-pointer">
                                         <i class="fa-solid fa-camera mr-2"></i>
-                                        Cargar Imagen
+                                        Cargar logo
                                         <input type="file" accept="image/*" name="image" class="hidden"
                                             onchange="previewImage(event, '#imgPreview')">
                                     </label>
@@ -79,14 +79,14 @@
 
                             <div class="mb-4">
                                 <x-label class="mb-1">
-                                    Nombre de la universidad
+                                    Nombre de la institutcion
                                 </x-label>
                                 <x-input class="w-full" name="nombre" placeholder="Ingrese el nombre de la universidad"
                                     value="{{ old('nombre', $instituto->nombre) }}" />
                             </div>
                             <div class="mb-4">
                                 <x-label class="mb-1">
-                                    Descripción de la universidad
+                                    Descripción del instituto
                                 </x-label>
                                 <x-textarea class="w-full" name="descripcion" placeholder="Agregar una descripción..">
                                     {{ old('descripcion', $instituto->descripcion) }}
@@ -159,7 +159,7 @@
                                     Total personas
                                 </x-label>
                                 <x-input type="number" class="w-full" name="total_personas"
-                                    placeholder="Ingrese el total de personas en la universidad"
+                                    placeholder="Ingrese el total de personas del instituto"
                                     value="{{ old('total_personas', $instituto->total_personas) }}" />
                             </div>
                         </div>
