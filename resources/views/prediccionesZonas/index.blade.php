@@ -1,16 +1,22 @@
 <x-app-layout>
+    <x-slot name="header">
+        <div class="flex justify-between items-center">
+            <h2 class="font-semibold text-2xl text-gray-800 leading-tight">
+                {{ __('Predicciones de Generación de Residuos') }}
+            </h2>
+        </div>
+    </x-slot>
+
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            <h1 class="text-3xl font-bold text-gray-900 mb-6">Predicciones de Generación de Residuos</h1>
-
             <!-- Resumen de estadísticas -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                 <div class="bg-white overflow-hidden shadow-xl sm:rounded-lg p-6">
-                    <h3 class="text-lg font-semibold text-gray-700 mb-2">Total Residuos 2024</h3>
+                    <h3 class="text-lg font-semibold text-gray-700 mb-2">Total Residuos </h3>
                     <p class="text-3xl font-bold text-blue-600">256 kg</p>
                 </div>
                 <div class="bg-white overflow-hidden shadow-xl sm:rounded-lg p-6">
-                    <h3 class="text-lg font-semibold text-gray-700 mb-2">Crecimiento Anual</h3>
+                    <h3 class="text-lg font-semibold text-gray-700 mb-2">CrecimientoAnual</h3>
                     <p class="text-3xl font-bold text-green-600">+0.3%</p>
                 </div>
                 <div class="bg-white overflow-hidden shadow-xl sm:rounded-lg p-6">
