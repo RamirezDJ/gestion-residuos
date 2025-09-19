@@ -21,10 +21,13 @@ class RegistroSemanalController extends Controller
     public function index()
     {
 
+        $institutoId = auth()->user()->instituto_id;
+
         $registros = GenSemanal::select('gen_semanals.id', 'fecha', 'zonas.nombre as zona', 'areas.nombre as areaAsignada', 'turno', 'valor_kg')
             ->join('zonas_areas', 'zonas_areas_id', '=', 'zonas_areas.id')
             ->join('zonas', 'zona_id', '=', 'zonas.id')
             ->join('areas', 'area_id', '=', 'areas.id')
+            ->where('zonas.instituto_id', $institutoId)
             ->get();
 
         // dd($registros);
@@ -50,12 +53,19 @@ class RegistroSemanalController extends Controller
             return redirect()->back()->withErrors(['msg' => 'Para guardar una evidencia necesita tener una universidad asociada.']);
         }
 
-        $zona_areas = ZonasAreas::select('zona_id', 'zonas.nombre as zona_nombre', 'area_id', 'areas.nombre as area_nombre')
+        $zona_areas = ZonasAreas::select(
+            'zona_id',
+            'zonas.nombre as zona_nombre',
+            'area_id',
+            'areas.nombre as area_nombre'
+        )
             ->join('zonas', 'zonas.id', '=', 'zonas_areas.zona_id')
             ->join('areas', 'areas.id', '=', 'zonas_areas.area_id')
+            ->where('zonas.instituto_id', $instituto->id)
             ->orderBy('zonas.id')
             ->get()
             ->groupBy('zona_id');
+
 
         // dd($zona_areas);
 

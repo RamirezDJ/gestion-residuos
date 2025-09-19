@@ -4,9 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\GenSemanal;
 use App\Models\Zona;
-use App\Models\ZonasAreas;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class PrediccionesZonasController extends Controller
 {
@@ -16,7 +16,8 @@ class PrediccionesZonasController extends Controller
     public function index()
     {
 
-        $zonas = Zona::all();
+        $institutoId = Auth::user()->instituto_id;
+        $zonas = Zona::where('instituto_id', $institutoId)->get();
 
         return view('prediccionesZonas.index', compact('zonas'));
     }
@@ -27,6 +28,7 @@ class PrediccionesZonasController extends Controller
             'zona_id' => 'required|exists:zonas,id'
         ]);
 
+        $institutoId = Auth::user()->instituto_id;
 
         // Promedio movil para obtener valores de predicción de los próximos 7 días
 
@@ -34,6 +36,7 @@ class PrediccionesZonasController extends Controller
             ->join('zonas', 'zonas_areas.zona_id', '=', 'zonas.id')
             ->selectRaw('zonas.id as zona_id, zonas.nombre as zona, DATE(gen_semanals.fecha) as fecha, SUM(gen_semanals.valor_kg) as total_kg')
             ->where('zonas.id', $request->zona_id)
+            ->where('zonas.instituto_id', $institutoId)
             ->groupBy('zonas.id', 'zonas.nombre', 'fecha')
             ->orderBy('fecha')
             ->get();

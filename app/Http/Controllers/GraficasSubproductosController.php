@@ -15,7 +15,9 @@ class GraficasSubproductosController extends Controller
     public function index()
     {
 
-        $baseQuery = GenSubproducto::query();
+        $institutoId = auth()->user()->instituto_id;
+
+        $baseQuery = GenSubproducto::where('instituto_id', $institutoId);
         $top3Subproductos = $this->getTop3Subproductos($baseQuery);
 
         return view('graficassubproductos.index', compact('top3Subproductos'));
@@ -29,7 +31,9 @@ class GraficasSubproductosController extends Controller
         $startDate = $request->input('startDate');
         $endDate = $request->input('endDate');
 
-        $baseQuery = GenSubproducto::query();
+        $institutoId = auth()->user()->instituto_id;
+
+        $baseQuery = GenSubproducto::where('instituto_id', $institutoId);
         $this->applyDataFilters($baseQuery, $periodo, $startDate, $endDate);
 
         switch ($tipoGrafica) {

@@ -21,6 +21,7 @@ class RegistroSubproductoController extends Controller
     public function index(Request $request)
     {
         $tiempo = $request->input('tiempo', 'semanal');
+        $institutoId = auth()->user()->instituto_id;
 
         switch ($tiempo) {
             case 'semanal':
@@ -33,9 +34,10 @@ class RegistroSubproductoController extends Controller
                     SUM(valor_kg) as total_kg,
                     instituto_id'
                 )
+                    ->where('instituto_id', $institutoId)
                     ->groupBy('year', 'semana', 'instituto_id')
-                    ->orderBy('year', 'asc') // Agregando la dirección explícita
-                    ->orderBy('semana', 'asc') // Agregando la dirección explícita
+                    ->orderBy('year', 'asc')
+                    ->orderBy('semana', 'asc')
                     ->get();
                 break;
 
@@ -48,14 +50,11 @@ class RegistroSubproductoController extends Controller
                     SUM(valor_kg) as total_kg, 
                     instituto_id'
                 )
+                    ->where('instituto_id', $institutoId)
                     ->groupBy('year', 'mes', 'instituto_id')
                     ->orderBy('year', 'asc')
-                    ->orderBy(
-                        'mes',
-                        'asc'
-                    )
+                    ->orderBy('mes', 'asc')
                     ->get();
-
                 break;
 
             case 'anual':
@@ -66,6 +65,7 @@ class RegistroSubproductoController extends Controller
                     SUM(valor_kg) as total_kg, 
                     instituto_id'
                 )
+                    ->where('instituto_id', $institutoId)
                     ->groupBy('year', 'instituto_id')
                     ->orderBy('year', 'asc')
                     ->get();

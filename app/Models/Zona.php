@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Institutos;
+
 
 class Zona extends Model
 {
@@ -20,7 +22,7 @@ class Zona extends Model
 
     public function instituto()
     {
-        return $this->belongsTo(Instituto::class, 'instituto_id');
+        return $this->belongsTo(Institutos::class, 'instituto_id');
     }
 
 

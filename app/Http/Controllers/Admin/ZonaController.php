@@ -29,11 +29,10 @@ class ZonaController extends Controller
      */
     public function create()
     {
-        $institutos = Institutos::all();
-        $areas =  Area::all();
+        $instituto = auth()->user()->instituto;
+        $areas = Area::where('instituto_id', $instituto->id)->get();
 
-
-        return view('admin.zonas.create', compact('institutos', 'areas'));
+        return view('admin.zonas.create', compact('areas', 'instituto'));
     }
 
     /**
@@ -44,15 +43,20 @@ class ZonaController extends Controller
         $request->validate([
             'nombre' => ['required', 'unique:zonas,nombre'],
             'descripcion' => 'nullable',
-            'instituto_id' => 'required|exists:institutos,id',
             'areas' => 'nullable|array',
         ]);
 
         // Se crea la zona  
-        $zona = Zona::create($request->all());
+        $zona = Zona::create([
+            'nombre' => $request->nombre,
+            'descripcion' => $request->descripcion,
+            'instituto_id' => auth()->user()->instituto_id,
+        ]);
 
         // Accedemos a la zona y su relacion con area para sincronizar los datos
-        $zona->areas()->attach($request->areas);
+        if ($request->filled('areas')) {
+            $zona->areas()->attach($request->areas);
+        }
 
         session()->flash('swal', [
             'icon' => 'success',
