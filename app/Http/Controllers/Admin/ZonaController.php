@@ -80,13 +80,12 @@ class ZonaController extends Controller
      */
     public function edit(Zona $zona)
     {
-        $institutos = Institutos::all();
+        // Traer únicamente las áreas del mismo instituto del usuario logueado
+        $areas = Area::where('instituto_id', auth()->user()->instituto_id)->get();
 
-        $areas = $zona->areas();
-        $areas = Area::all();
-
-        return view('admin.zonas.edit', compact('zona', 'institutos', 'areas'));
+        return view('admin.zonas.edit', compact('zona', 'areas'));
     }
+
 
     /**
      * Update the specified resource in storage.
