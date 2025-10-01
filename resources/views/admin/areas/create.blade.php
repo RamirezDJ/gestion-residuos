@@ -39,7 +39,7 @@
 
             <div class="mb-4">
                 <x-label class="mb-1">
-                    Universidad perteneciente
+                    Instituto perteneciente
                 </x-label>
 
                 <p class="text-gray-700 font-medium">

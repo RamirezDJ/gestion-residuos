@@ -41,7 +41,7 @@
 
             <div class="mb-4">
                 <x-label class="mb-1">
-                    Universidad perteneciente
+                    Instituto perteneciente
                 </x-label>
 
                 <x-select class="w-full" name="instituto_id" readonly>
