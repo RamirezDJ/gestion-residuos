@@ -25,13 +25,27 @@ class SubprodcutosController extends Controller
     {
         return view('admin.subproductos.create');
     }
-
+    
     /**
      * Store a newly created resource in storage.
      */
     public function store(Request $request)
     {
-        //
+        $request->validate([
+            'nombre' => 'required|string|max:255',
+        ]);
+
+        Subproducto::create([
+            'nombre' => $request->nombre,
+        ]);
+
+        session()->flash('swal', [
+            'icon' => 'success',
+            'title' => 'Hecho!',
+            'text' => 'El subproducto se ha creado correctamente!'
+        ]);
+
+        return redirect()->route('admin.subproductos.index');
     }
 
     /**
@@ -55,7 +69,20 @@ class SubprodcutosController extends Controller
      */
     public function update(Request $request, Subproducto $subproducto)
     {
-        //
+        $request->validate([
+            'nombre' => 'required|string|max:255',
+        ]);
+
+        $subproducto->nombre = $request->nombre;
+        $subproducto->save();
+
+        session()->flash('swal', [
+            'icon' => 'success',
+            'title' => 'Hecho!',
+            'text' => 'El subproducto se ha actualizado correctamente!'
+        ]);
+
+        return redirect()->route('admin.subproductos.index');
     }
 
     /**

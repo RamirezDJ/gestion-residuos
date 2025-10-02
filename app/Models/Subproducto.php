@@ -10,6 +10,8 @@ class Subproducto extends Model
     /** @use HasFactory<\Database\Factories\SubproductoFactory> */
     use HasFactory;
 
+    protected $fillable = ['nombre'];
+
     // Relacion uno a muchos a nivel de eloquent
 
     public function genSubproducto()
