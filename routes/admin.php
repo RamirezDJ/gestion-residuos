@@ -21,6 +21,14 @@ Route::resource('/zonas', ZonaController::class)
 Route::resource('/areas', AreaController::class)
     ->middleware(['can:Acceso a Areas']);
 
+Route::get('/areas/{area}/subproductos', [AreaController::class, 'editSubproductos'])
+     ->name('admin.areas.editSubproductos')
+     ->middleware(['can:Acceso a Areas']);
+
+Route::put('/areas/{area}/subproductos', [AreaController::class, 'updateSubproductos'])
+     ->name('admin.areas.updateSubproductos')
+     ->middleware(['can:Acceso a Areas']);
+
 Route::resource('/subproductos', SubprodcutosController::class)
     ->middleware(['can:Acceso a Subproductos']);
 

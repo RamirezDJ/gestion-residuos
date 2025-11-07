@@ -10,6 +10,11 @@ class Area extends Model
     /** @use HasFactory<\Database\Factories\AreaFactory> */
     use HasFactory;
 
+    public function subproductos()
+    {
+        return $this->belongsToMany(Subproducto::class, 'area_subproducto');
+    }
+
     protected $fillable = [
         'nombre',
         'descripcion',

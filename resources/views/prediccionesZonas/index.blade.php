@@ -9,20 +9,36 @@
 
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            <!-- Resumen de estadísticas -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+
                 <div class="bg-white overflow-hidden shadow-xl sm:rounded-lg p-6">
-                    <h3 class="text-lg font-semibold text-gray-700 mb-2">Total Residuos 2024</h3>
-                    <p class="text-3xl font-bold text-blue-600">256 kg</p>
+                    <h3 class="text-lg font-semibold text-gray-700 mb-2">Total Residuos {{ $anoActual }}</h3>
+                    <p class="text-3xl font-bold text-blue-600">
+                        {{ number_format($totalResiduosAnoActual, 2) }} kg
+                    </p>
                 </div>
+
                 <div class="bg-white overflow-hidden shadow-xl sm:rounded-lg p-6">
-                    <h3 class="text-lg font-semibold text-gray-700 mb-2">Crecimiento Anual</h3>
-                    <p class="text-3xl font-bold text-green-600">+0.3%</p>
+                    <h3 class="text-lg font-semibold text-gray-700 mb-2">Crecimiento (vs {{ $anoAnterior }})</h3>
+                    <p class="text-3xl font-bold {{ $crecimientoAnual >= 0 ? 'text-green-600' : 'text-red-600' }}">
+                        {{ $crecimientoAnual >= 0 ? '+' : '' }}{{ number_format($crecimientoAnual, 1) }}%
+                    </p>
                 </div>
+
                 <div class="bg-white overflow-hidden shadow-xl sm:rounded-lg p-6">
                     <h3 class="text-lg font-semibold text-gray-700 mb-2">Zona con más Generación</h3>
-                    <p class="text-3xl font-bold text-purple-600">Zona 3</p>
+                    <p class="text-3xl font-bold text-purple-600">
+                        @if ($zonaMasGeneracion)
+                            {{ $zonaMasGeneracion->nombre }}
+                            <span class="text-base font-medium text-gray-500">
+                                ({{ number_format($zonaMasGeneracion->total_kilos, 0) }} kg)
+                            </span>
+                        @else
+                            N/A
+                        @endif
+                    </p>
                 </div>
+
             </div>
 
             <!-- Filtros  (implementar a futuro) -->
@@ -47,20 +63,20 @@
             <div class="bg-white overflow-hidden shadow-xl sm:rounded-lg mb-8">
                 <div class="p-6 pb-0 flex justify-between items-center">
                     <h2 class="text-xl font-semibold text-gray-900 mb-4">Gráfico de Predicciones</h2>
-                        <x-select id="zonaSelect" class="mb-4">
-                            @foreach ($zonas as $zona)
-                                <option @selected(request('zona_id') == $zona->id) value="{{ $zona->id }}">
-                                    {{ $zona->nombre }}
-                                </option>
-                            @endforeach
-                        </x-select>
+                    <x-select id="zonaSelect" class="mb-4">
+                        @foreach ($zonas as $zona)
+                            <option @selected(request('zona_id') == $zona->id) value="{{ $zona->id }}">
+                                {{ $zona->nombre }}
+                            </option>
+                        @endforeach
+                    </x-select>
                 </div>
                 <div class="px-6">
                     <div id="semanal-chart" class="w-full h-96 mb-8"></div>
                 </div>
             </div>
 
-{{-- <!-- Tabla de Datos -->
+            {{-- <!-- Tabla de Datos -->
 <div class="bg-white overflow-hidden shadow-xl sm:rounded-lg">
     <div class="p-6">
         <h2 class="text-xl font-semibold text-gray-900 mb-4">Datos de Predicciones</h2>

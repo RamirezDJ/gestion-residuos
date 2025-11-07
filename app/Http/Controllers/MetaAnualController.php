@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\GenSemanal;
 use App\Models\Institutos;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class MetaAnualController extends Controller
 {
@@ -14,35 +15,49 @@ class MetaAnualController extends Controller
     public function index()
     {
         // llamar a los datos dependiendo del instituto
-        $instituto = auth()->user()->instituto_id;
+        $institutoId = auth()->user()->instituto_id;
 
         // Obtenemos los datos del instituto
-        $instituto = Institutos::where('id', $instituto)
+        $instituto = Institutos::where('id', $institutoId)
             ->select('id', 'nombre', 'meta_anual', 'total_personas')
             ->first();
-        // dd($meta);
-        // Calcular el total de residuos generados en las zonas
-        $totalResiduos = GenSemanal::whereHas('zonaArea.zona.instituto', function ($query) use ($instituto) {
-            $query->where('id', $instituto->id);
-        })->sum('valor_kg');
 
-        $promedioPercapita = $instituto->total_personas > 0 ? $totalResiduos / $instituto->total_personas : 0;
+        // Creamos una consulta base para el instituto
+        $queryBase = GenSemanal::whereHas('zonaArea.zona', function ($query) use ($institutoId) {
+            $query->where('instituto_id', $institutoId);
+        });
 
-        // Promedio per capita anual considernado los 309 dias laborales
-        // $promedioPercapitaAnual = $promedioPercapita * 309;
+        // --- INICIO DE LA LÓGICA CORREGIDA ---
+
+        // 1. Calcular el total de residuos generados
+        $totalResiduos = $queryBase->sum('kilos');
+
+        // 2. Contar los días únicos que tienen registros
+        $diasUnicosConRegistro = $queryBase->distinct('fecha')->count('fecha');
+
+        // 3. Calcular el promedio de kilos POR DÍA
+        $promedioKilosPorDia = $diasUnicosConRegistro > 0 ? $totalResiduos / $diasUnicosConRegistro : 0;
+
+        // 4. Calcular el promedio PER CAPITA por DÍA (Este es el cálculo correcto)
+        $promedioPercapitaDiario = $instituto->total_personas > 0 ? $promedioKilosPorDia / $instituto->total_personas : 0;
+
+        // --- FIN DE LA LÓGICA CORREGIDA ---
 
         // Porcentaje de cumplimiento de la meta anual
-        $excedeMeta = $promedioPercapita > $instituto->meta_anual;
+        // (Esta lógica compara tu meta anual con el promedio per cápita, puedes ajustarla si es necesario)
+        $excedeMeta = $promedioPercapitaDiario > $instituto->meta_anual;
 
-        // dd($totalResiduos);
-        // dd($promedioPercapita);
-        // dd($promedioPercapitaAnual);
+        // Obtener los registros de cada zona con mayor generacion
+        $registroConMayorGeneracion = GenSemanal::whereHas('zonaArea.zona.instituto', function ($query) use ($institutoId) {
+            $query->where('id', $institutoId);
+        })->orderBy('kilos', 'desc')->paginate(5);
 
-        // Obtener los registros de cada zona con mayor generacion de forma decendente en kg (que les sirva a los usuario para identificar las zonas con mayor generacion)
-        $registroConMayorGeneracion = GenSemanal::whereHas('zonaArea.zona.instituto', function ($query) use ($instituto) {
-            $query->where('id', $instituto->id);
-        })->orderBy('valor_kg', 'desc')->paginate(5);
-
-        return view('metaAnual.index', compact('instituto', 'totalResiduos', 'promedioPercapita', 'excedeMeta', 'registroConMayorGeneracion'));
+        return view('metaAnual.index', compact(
+            'instituto',
+            'totalResiduos',
+            'promedioPercapitaDiario', // <-- Pasamos la nueva variable
+            'excedeMeta',
+            'registroConMayorGeneracion'
+        ));
     }
 }

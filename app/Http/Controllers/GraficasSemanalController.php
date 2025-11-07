@@ -110,7 +110,8 @@ class GraficasSemanalController extends Controller
         return $query->select(
             'zonas.id as zona_id',
             'zonas.nombre as zona',
-            DB::raw('SUM(gen_semanals.valor_kg) as total_kg')
+            // --- LÍNEA CORREGIDA ---
+            DB::raw('SUM(gen_semanals.kilos) as total_kg')
         )
             ->groupBy('zonas.id', 'zonas.nombre')
             ->orderBy('total_kg', 'DESC')
@@ -137,7 +138,8 @@ class GraficasSemanalController extends Controller
         return $query->select(
             'zonas.id as zona_id',
             'zonas.nombre as zona',
-            DB::raw('SUM(gen_semanals.valor_kg) as total_kg')
+            // --- LÍNEA CORREGIDA ---
+            DB::raw('SUM(gen_semanals.kilos) as total_kg')
         )
             ->groupBy('zonas.id', 'zonas.nombre')
             ->orderBy('total_kg', 'DESC')
@@ -162,7 +164,8 @@ class GraficasSemanalController extends Controller
         return $query->select(
             'zonas.id as zona_id',
             'zonas.nombre as zona',
-            DB::raw('SUM(gen_semanals.valor_kg) as total_kg')
+            // --- LÍNEA CORREGIDA ---
+            DB::raw('SUM(gen_semanals.kilos) as total_kg')
         )
             ->groupBy('zonas.id', 'zonas.nombre')
             ->orderBy('total_kg', 'DESC')
@@ -188,7 +191,8 @@ class GraficasSemanalController extends Controller
             'gen_semanals.fecha',
             'zonas.id as zona_id',
             'zonas.nombre as zona',
-            DB::raw('SUM(gen_semanals.valor_kg) as total_kg')
+            // --- LÍNEA CORREGIDA ---
+            DB::raw('SUM(gen_semanals.kilos) as total_kg')
         )
             ->groupBy('gen_semanals.fecha', 'zonas.id')
             ->orderBy('gen_semanals.fecha', 'ASC')

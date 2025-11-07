@@ -31,7 +31,6 @@
                 <x-label class="mb-1">
                     Descripción de la zona
                 </x-label>
-
                 <x-textarea class="w-full" name="descripcion" placeholder="Sin descripción...">
                     {{ old('descripcion', isset($zona) ? $zona->descripcion : '') }}
                 </x-textarea>
@@ -41,7 +40,6 @@
                 <x-label class="mb-1">
                     Instituto perteneciente
                 </x-label>
-
                 <p class="text-gray-700 font-medium">
                     {{ auth()->user()->instituto?->nombre ?? 'Ninguno' }}
                 </p>
@@ -49,18 +47,26 @@
             </div>
 
             <div class="mb-4">
-                <ul>
+                <x-label class="mb-2">
+                    Áreas que pertenecen a esta Zona
+                </x-label>
+
+                <div class="border rounded-lg p-4 grid grid-cols-1 md:grid-cols-3 gap-4">
                     @foreach ($areas as $area)
-                        <li>
-                            <label>
-                                <x-checkbox name='areas[]' value="{{ $area->id }}" :checked="in_array($area->id, old('areas', []))" />
+                        <div class="flex items-center">
+
+                            <input type="checkbox" name="areas[]" id="area_{{ $area->id }}"
+                                value="{{ $area->id }}"
+                                class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                                {{-- Revisa si el ID estaba en los datos 'old' (en caso de error de validación) --}} @if (in_array($area->id, old('areas', []))) checked @endif>
+                            <label for="area_{{ $area->id }}" class="ml-3 block text-sm text-gray-700">
                                 {{ $area->nombre }}
                             </label>
-                        </li>
-                    @endforeach
-                </ul>
-            </div>
 
+                        </div>
+                    @endforeach
+                </div>
+            </div>
             <div class="flex justify-end">
                 <x-button>
                     Crear Zona

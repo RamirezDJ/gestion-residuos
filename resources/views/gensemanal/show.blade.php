@@ -1,14 +1,13 @@
 <x-app-layout>
     <section class="bg-gray-50 dark:bg-gray-900 p-3 sm:p-5">
         <div class="px-4 pt-5 pb-5 mx-auto sm:max-w-xl md:max-w-full lg:max-w-screen-xl md:px-24 lg:px-8">
-            <!-- Start coding here -->
             <div class="bg-white dark:bg-gray-800 relative shadow-md sm:rounded-lg overflow-hidden">
                 <div class="grid grid-cols-4 gap-4 p-4">
-                    {{-- Ejemplo de una tabla show --}}
+
                     <div class="bg-white overflow-hidden shadow rounded-lg border col-span-1">
                         <div class="px-4 py-5 sm:px-6">
                             <h3 class="text-lg leading-6 font-medium text-gray-900">
-                                Datos Generales
+                                Resumen Semanal
                             </h3>
                             <p class="mt-1 max-w-2xl text-sm text-gray-500">
                                 Resumen de los datos generados del instituto.
@@ -21,48 +20,26 @@
                                         Fecha
                                     </dt>
                                     <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-1">
-                                        {{ $fecha }}
+                                        {{ $fechaInicioFormateada }} - {{ $fechaFinFormateada }}
                                     </dd>
                                 </div>
                                 <div class="py-3 sm:py-5 sm:grid sm:grid-cols-2 sm:gap-4 sm:px-4">
                                     <dt class="text-sm font-medium text-gray-500">
-                                        Turno
+                                        Total generado (semana)
                                     </dt>
                                     <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-1">
-                                        {{ $turno }}
+                                        {{ number_format($totalGeneradoSemana, 2) }} kg
                                     </dd>
                                 </div>
                                 <div class="py-3 sm:py-5 sm:grid sm:grid-cols-2 sm:gap-4 sm:px-4">
                                     <dt class="text-sm font-medium text-gray-500">
-                                        Total generado de las zonas
+                                        Zona con mayor generación (semana)
                                     </dt>
                                     <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-1">
-                                        @php
-                                            $totalGenerado = $registros->flatten()->sum('valor_kg');
-                                        @endphp
-                                        {{ number_format($totalGenerado, 2) }} kg
+                                        {{ $zonaMayorNombreSemana }}
+                                        ({{ number_format($zonaMayorTotalSemana, 2) }} kg)
                                     </dd>
                                 </div>
-                                <div class="py-3 sm:py-5 sm:grid sm:grid-cols-2 sm:gap-4 sm:px-4">
-                                    <dt class="text-sm font-medium text-gray-500">
-                                        Zona con mayor generación
-                                    </dt>
-                                    <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-1">
-                                        @php
-                                            $zonaMayor = $registros
-                                                ->map(function ($zona) {
-                                                    return $zona->sum('valor_kg');
-                                                })
-                                                ->sortDesc()
-                                                ->keys()
-                                                ->first();
-                                            $totalZonaMayor = $registros[$zonaMayor]->sum('valor_kg');
-                                        @endphp
-                                        {{ $registros[$zonaMayor]->first()->zona }}
-                                        ({{ number_format($totalZonaMayor, 2) }} kg)
-                                    </dd>
-                                </div>
-
                                 <div class="py-3 sm:py-5 sm:gap-4 sm:px-4">
                                     <dt class="text-sm font-medium text-gray-500 mb-2">
                                         Instituto
@@ -76,91 +53,104 @@
                                         Descargar archivo
                                     </dt>
                                     <div class="flex justify-center gap-4">
-                                        <a href="{{ route('gensemanal.pdf', ['fecha' => $fechaUrl, 'turno' => $turno])}}" target="_blank"
+
+                                        <a href="{{ route('gensemanal.pdf', ['fecha' => $fechaInicioSemana]) }}"
+                                            target="_blank"
                                             class="bg-red-500 hover:bg-red-600 text-white p-3 rounded shadow">
                                             <i class="fa-solid fa-file-pdf"></i> En PDF
                                         </a>
-                                        <a href="{{ route('gensemanal.excel', ['fecha' => $fechaUrl, 'turno' => $turno])}}"
+
+                                        <a href="{{ route('gensemanal.excel', ['fecha' => $fechaInicioSemana]) }}"
                                             class="bg-green-500 hover:bg-green-600 text-white p-3 rounded shadow">
                                             <i class="fa-solid fa-file-excel"></i> En Excel
                                         </a>
                                     </div>
-
                                 </div>
                             </dl>
                         </div>
                     </div>
-
                     <div class="bg-white overflow-hidden shadow rounded-lg border col-span-3">
                         <div class="px-4 py-5 sm:px-6">
                             <h3 class="text-lg leading-6 font-medium text-gray-900">
-                                Datos Generados desglosados
+                                Desglose Diario de la Semana
                             </h3>
                             <p class="mt-1 max-w-2xl text-sm text-gray-500">
-                                Todos los datos generados de cada zona y area.
+                                Kilos generados por día, zona, área y subproducto.
                             </p>
                         </div>
                         <div class="border-t border-gray-200 px-4 py-5 sm:p-0 max-h-[500px] overflow-y-auto">
-                            <div class="p-4">
-                                @foreach ($registros as $zona => $datos)
-                                    <div class="overflow-hidden rounded-lg border shadow mb-5">
-                                        <table class="w-full text-sm leading-5">
-                                            <thead class="bg-gray-100">
-                                                <tr>
-                                                    <th class="py-3 px-4 text-center text-base font-semibold text-gray-600"
-                                                        colspan="8">{{ $datos->first()->zona }}</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <!-- Fila de Áreas -->
-                                                @php
-                                                    $areaChunks = array_chunk(
-                                                        $datos->pluck('areaAsignada')->toArray(),
-                                                        6,
-                                                    );
-                                                    $cantidadChunks = array_chunk(
-                                                        $datos->pluck('valor_kg')->toArray(),
-                                                        6,
-                                                    );
-                                                @endphp
-                                                @foreach ($areaChunks as $index => $areaChunk)
-                                                    <tr class="border-t border-gray-300">
-                                                        <td class="py-3 px-4 text-left font-bold">Área:</td>
-                                                        @foreach ($areaChunk as $area)
-                                                            <td class="py-3 px-4 text-left">{{ $area }}</td>
-                                                        @endforeach
-                                                        <!-- Rellenar celdas vacías si la fila tiene menos de 6 columnas -->
-                                                        @foreach (array_pad($areaChunk, 6, '') as $area)
-                                                            @if ($area === '')
-                                                                <td class="py-3 px-4 text-left"></td>
-                                                            @endif
-                                                        @endforeach
-                                                    </tr>
-                                                    <tr>
-                                                        <td class="py-3 px-4 text-left font-bold">Cantidad Generada:
-                                                        </td>
-                                                        @foreach ($cantidadChunks[$index] as $cantidad)
-                                                            <td class="py-3 px-4 text-left">{{ $cantidad }}</td>
-                                                        @endforeach
-                                                        <!-- Rellenar celdas vacías si la fila tiene menos de 6 columnas -->
-                                                        @foreach (array_pad($cantidadChunks[$index], 6, '') as $cantidad)
-                                                            @if ($cantidad === '')
-                                                                <td class="py-3 px-4 text-left"></td>
-                                                            @endif
-                                                        @endforeach
-                                                    </tr>
-                                                @endforeach
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                @endforeach
-                            </div>
+                            <div class="p-4 space-y-6">
 
+                                @php
+                                    // LE DECIMOS A CARBON QUE EL FORMATO ES 'd/m/Y'
+                                    $fechaActual = \Carbon\Carbon::createFromFormat(
+                                        'd/m/Y',
+                                        $fechaInicioFormateada,
+                                        'Europe/London',
+                                    );
+                                    $fechaFin = \Carbon\Carbon::createFromFormat(
+                                        'd/m/Y',
+                                        $fechaFinFormateada,
+                                        'Europe/London',
+                                    );
+                                @endphp
+
+                                @while ($fechaActual <= $fechaFin)
+                                    @php
+                                        $fechaIter = $fechaActual->format('Y-m-d');
+                                        $datosDelDia = $lookupDataSemanal[$fechaIter] ?? []; // Busca los datos para ESTE día
+                                    @endphp
+
+                                    @if (!empty($datosDelDia))
+                                        <div class="border rounded-md p-4 shadow-sm">
+                                            <h4 class="text-md font-semibold text-gray-800 mb-3 border-b pb-2">
+                                                {{ $fechaActual->isoFormat('dddd, D [de] MMMM') }}
+                                                ({{ $fechaActual->format('d/m/Y') }})
+                                            </h4>
+
+                                            @foreach ($zonas as $zona)
+                                                <div class="mb-4">
+                                                    <p class="text-sm font-bold text-gray-700 mb-2">{{ $zona->nombre }}
+                                                    </p>
+
+                                                    <div class="grid grid-cols-3 gap-x-4 gap-y-2 pl-4">
+                                                        @foreach ($zona->areas as $area)
+                                                            <div>
+                                                                <p class="text-xs font-semibold text-gray-600 mb-1">
+                                                                    {{ $area->nombre }}</p>
+                                                                <div class="pl-2 border-l">
+                                                                    @foreach ($area->subproductos as $subproducto)
+                                                                        @php
+                                                                            // Buscamos el valor para este día, área y subproducto
+                                                                            $kilos =
+                                                                                $datosDelDia[$area->id][
+                                                                                    $subproducto->id
+                                                                                ] ?? 0;
+                                                                        @endphp
+                                                                        @if ($kilos > 0)
+                                                                            <div class="text-xs flex justify-between">
+                                                                                <span
+                                                                                    class="text-gray-500">{{ $subproducto->nombre }}:</span>
+                                                                                <span
+                                                                                    class="font-medium text-gray-800">{{ number_format($kilos, 2) }}
+                                                                                    kg</span>
+                                                                            </div>
+                                                                        @endif
+                                                                    @endforeach
+                                                                </div>
+                                                            </div>
+                                                        @endforeach
+                                                    </div>
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                    @endif
+
+                                    @php $fechaActual->addDay(); @endphp
+                                @endwhile
+                            </div>
                         </div>
                     </div>
-
-                    {{-- Otro ejemplo para mostrar los datos --}}
-
                 </div>
             </div>
         </div>

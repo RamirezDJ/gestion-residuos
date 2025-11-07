@@ -1,8 +1,9 @@
 <?php
 
-namespace App\Exports;
+namespace App; // Asegúrate que tu namespace sea 'App\Exports' si así lo tienes
+namespace App\Exports; // <-- O este
 
-use App\Models\ZonasAreas;
+use Carbon\Carbon;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithColumnWidths;
 use Maatwebsite\Excel\Concerns\WithEvents;
@@ -13,13 +14,13 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
 class RegistroSemanalExport implements FromCollection, WithHeadings, WithStyles, WithColumnWidths, WithEvents
 {
-
-    protected $fecha;
+    protected $tituloFecha; // Cambiado de $fecha a $tituloFecha
     protected $registros;
 
-    public function __construct($registros, $fecha)
+    // El constructor ahora recibe la colección y el título
+    public function __construct($registros, $tituloFecha)
     {
-        $this->fecha = $fecha;
+        $this->tituloFecha = $tituloFecha;
         $this->registros = $registros;
     }
 
@@ -28,107 +29,84 @@ class RegistroSemanalExport implements FromCollection, WithHeadings, WithStyles,
      */
     public function collection()
     {
-        // Devuelve solo las columnas relevantes para el archivo
+        // Mapeamos la colección para formatear la fecha y seleccionar columnas
         return $this->registros->map(function ($registro) {
             return [
-                'zona_id' => $registro->zona_id,
-                'zona' => $registro->zona,
-                'area_id' => $registro->area_id,
-                'areaAsignada' => $registro->areaAsignada,
-                'fecha' => $registro->fecha,
+                'fecha' => Carbon::parse($registro->fecha)->format('d/m/Y'), // Formateamos fecha
                 'turno' => $registro->turno,
-                'valor_kg' => $registro->valor_kg,
+                'zona' => $registro->zona_nombre,   // Usamos los nombres ya seleccionados
+                'areaAsignada' => $registro->area_nombre,
+                'subproducto' => $registro->subproducto_nombre, // Nueva columna
+                'kilos' => $registro->kilos,         // Columna renombrada
             ];
         });
     }
 
+    // Encabezados actualizados
     public function headings(): array
     {
         return [
-            'Zona ID',
-            'Zona',
-            'Área ID',
-            'Área Asignada',
             'Fecha',
             'Turno',
-            'Valor (kg)',
+            'Zona',
+            'Área Asignada',
+            'Subproducto', // Nuevo encabezado
+            'Kilos (kg)',  // Encabezado renombrado
         ];
     }
 
+    // Estilos (Ajustamos rango)
     public function styles(Worksheet $sheet)
     {
         return [
-            // Estilo para los encabezados
-            1 => ['font' => ['bold' => true]],
-
-            // Opcional: Estilo para una columna específica (ejemplo: B)
-            'B' => ['font' => ['italic' => true]],
-
-            // Estilo general para el resto
-            'A1:G100' => ['alignment' => ['horizontal' => 'center']],
+            // Fila 2 (encabezados) en negrita
+            2    => ['font' => ['bold' => true]],
+            // Rango ajustado para 6 columnas (A hasta F)
+            'A2:F1000' => ['alignment' => ['horizontal' => 'center']], // Aumentado el rango de filas
         ];
     }
 
+    // Anchos de columna (Ajustamos y añadimos F)
     public function columnWidths(): array
     {
         return [
-            'A' => 15, // Ancho de la columna A
-            'B' => 30, // Ancho de la columna B
-            'C' => 15,
-            'D' => 35,
-            'E' => 15,
-            'F' => 15,
-            'G' => 20,
+            'A' => 15, // Fecha
+            'B' => 15, // Turno
+            'C' => 30, // Zona
+            'D' => 35, // Área Asignada
+            'E' => 30, // Subproducto (Nuevo)
+            'F' => 15, // Kilos (Antes G)
         ];
     }
 
+    // Eventos (Ajustamos título, rangos y columnas)
     public function registerEvents(): array
     {
         return [
             AfterSheet::class => function (AfterSheet $event) {
                 $sheet = $event->sheet->getDelegate();
 
-                // Agregar el título en la primera fila
-                $sheet->setCellValue('A1', 'Datos Generados en la fecha ' . $this->fecha);
-
-                // Combinar celdas para el título
-                $sheet->mergeCells('A1:G1');
-
-                // Aplicar estilos al título
+                // Título en la fila 1 (Usa la variable $tituloFecha)
+                $sheet->setCellValue('A1', 'Datos Generados en la Semana ' . $this->tituloFecha);
+                $sheet->mergeCells('A1:F1'); // Rango ajustado a 6 columnas
                 $sheet->getStyle('A1')->applyFromArray([
-                    'font' => [
-                        'bold' => true,
-                        'size' => 14,
-                        'color' => ['argb' => '0a0a0a'],
-                    ],
-                    'alignment' => [
-                        'horizontal' => 'center',
-                        'vertical' => 'center',
-                    ],
+                    'font' => ['bold' => true, 'size' => 14, 'color' => ['argb' => '0a0a0a']],
+                    'alignment' => ['horizontal' => 'center', 'vertical' => 'center'],
                 ]);
-
-                // Ajustar la altura de la fila del título
                 $sheet->getRowDimension('1')->setRowHeight(30);
 
-                // Insertar los encabezados en la fila 2
+                // Encabezados en la fila 2
                 $headings = $this->headings();
                 foreach ($headings as $index => $heading) {
                     $sheet->setCellValueByColumnAndRow($index + 1, 2, $heading);
                 }
-
-                // Estilo para los encabezados
-                $sheet->getStyle('A2:G2')->applyFromArray([
-                    'font' => [
-                        'bold' => true,
-                    ],
-                    'alignment' => [
-                        'horizontal' => 'center',
-                        'vertical' => 'center',
-                    ],
+                $sheet->getStyle('A2:F2')->applyFromArray([ // Rango ajustado
+                    'font' => ['bold' => true],
+                    'alignment' => ['horizontal' => 'center', 'vertical' => 'center'],
                 ]);
 
-                // Aplicar el filtro automático a las columnas
-                $sheet->setAutoFilter('A2:G2');
+                // Filtro automático
+                $sheet->setAutoFilter('A2:F2'); // Rango ajustado
             },
         ];
     }

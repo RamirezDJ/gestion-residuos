@@ -7,6 +7,7 @@ use App\Models\Zona;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class PrediccionesZonasController extends Controller
 {
@@ -15,11 +16,51 @@ class PrediccionesZonasController extends Controller
      */
     public function index()
     {
-
         $institutoId = Auth::user()->instituto_id;
         $zonas = Zona::where('instituto_id', $institutoId)->get();
 
-        return view('prediccionesZonas.index', compact('zonas'));
+        // --- LÓGICA DINÁMICA DE AÑO ---
+        $anoActual = Carbon::now()->year; // -> Obtendrá 2025
+        $anoAnterior = $anoActual - 1;   // -> Obtendrá 2024
+
+        // 1. Total Residuos (del año actual)
+        $totalResiduosAnoActual = GenSemanal::whereHas('zonaArea.zona', function ($query) use ($institutoId) {
+            $query->where('instituto_id', $institutoId);
+        })->whereYear('fecha', $anoActual)->sum('kilos'); // <-- Usa $anoActual
+
+        // 2. Crecimiento Anual (comparando actual vs anterior)
+        $totalResiduosAnoAnterior = GenSemanal::whereHas('zonaArea.zona', function ($query) use ($institutoId) {
+            $query->where('instituto_id', $institutoId);
+        })->whereYear('fecha', $anoAnterior)->sum('kilos'); // <-- Usa $anoAnterior
+
+        if ($totalResiduosAnoAnterior > 0) {
+            $crecimientoAnual = (($totalResiduosAnoActual - $totalResiduosAnoAnterior) / $totalResiduosAnoAnterior) * 100;
+        } else if ($totalResiduosAnoActual > 0) {
+            $crecimientoAnual = 100.0; // Crecimiento "infinito" (de 0 a >0)
+        } else {
+            $crecimientoAnual = 0.0; // 0 en ambos años
+        }
+
+        // 3. Zona con más Generación (Histórico - esto no cambia)
+        $zonaMasGeneracion = GenSemanal::join('zonas_areas', 'gen_semanals.zonas_areas_id', '=', 'zonas_areas.id')
+            ->join('zonas', 'zonas_areas.zona_id', '=', 'zonas.id')
+            ->selectRaw('zonas.nombre, SUM(gen_semanals.kilos) as total_kilos')
+            ->where('zonas.instituto_id', $institutoId)
+            ->groupBy('zonas.nombre')
+            ->orderBy('total_kilos', 'DESC')
+            ->first();
+
+        // --- FIN DE LA LÓGICA ---
+
+        // Pasamos las nuevas variables a la vista
+        return view('prediccionesZonas.index', compact(
+            'zonas',
+            'totalResiduosAnoActual', // <-- Cambiamos el nombre de la variable
+            'crecimientoAnual',
+            'zonaMasGeneracion',
+            'anoActual',      // <-- Pasamos el año actual
+            'anoAnterior'     // <-- Pasamos el año anterior
+        ));
     }
 
     public function obtenerPredicciones(Request $request)
@@ -34,7 +75,9 @@ class PrediccionesZonasController extends Controller
 
         $datos = GenSemanal::join('zonas_areas', 'gen_semanals.zonas_areas_id', '=', 'zonas_areas.id')
             ->join('zonas', 'zonas_areas.zona_id', '=', 'zonas.id')
-            ->selectRaw('zonas.id as zona_id, zonas.nombre as zona, DATE(gen_semanals.fecha) as fecha, SUM(gen_semanals.valor_kg) as total_kg')
+            // --- LÍNEA CORREGIDA ---
+            ->selectRaw('zonas.id as zona_id, zonas.nombre as zona, DATE(gen_semanals.fecha) as fecha, SUM(gen_semanals.kilos) as total_kg')
+            // -------------------------
             ->where('zonas.id', $request->zona_id)
             ->where('zonas.instituto_id', $institutoId)
             ->groupBy('zonas.id', 'zonas.nombre', 'fecha')

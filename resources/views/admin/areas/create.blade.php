@@ -31,7 +31,6 @@
                 <x-label class="mb-1">
                     Descripción del Area
                 </x-label>
-
                 <x-textarea class="w-full" name="descripcion" placeholder="Sin descripción...">
                     {{ old('descripcion', isset($area) ? $area->descripcion : '') }}
                 </x-textarea>
@@ -41,14 +40,38 @@
                 <x-label class="mb-1">
                     Instituto perteneciente
                 </x-label>
-
                 <p class="text-gray-700 font-medium">
                     {{ auth()->user()->instituto?->nombre ?? 'Ninguno' }}
                 </p>
-                
                 <input type="hidden" name="instituto_id" value="{{ auth()->user()->instituto_id }}">
             </div>
 
+            <div class="mb-4">
+                <x-label class="mb-2">
+                    Subproductos que genera esta Área
+                </x-label>
+                
+                <div class="border rounded-lg p-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+                    @foreach ($subproductos_todos as $subproducto)
+                        <div class="flex items-center">
+                            <input type="checkbox" 
+                                   name="subproductos[]" 
+                                   id="sub_{{ $subproducto->id }}" 
+                                   value="{{ $subproducto->id }}"
+                                   class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                                   
+                                   {{-- Revisa 'old' en caso de error de validación --}}
+                                   @if(in_array($subproducto->id, old('subproductos', [])))
+                                       checked 
+                                   @endif
+                            >
+                            <label for="sub_{{ $subproducto->id }}" class="ml-3 block text-sm text-gray-700">
+                                {{ $subproducto->nombre }}
+                            </label>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
             <div class="flex justify-end">
                 <x-button>
                     Crear Area

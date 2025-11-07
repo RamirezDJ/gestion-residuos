@@ -14,7 +14,8 @@ class GenSemanal extends Model
         'zonas_areas_id',
         'fecha',
         'turno',
-        'valor_kg',
+        'subproducto_id', 
+        'kilos',          
     ];
 
     // Relacion uno a muchos inversa a nivel eloquent

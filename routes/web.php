@@ -22,11 +22,13 @@ Route::middleware([
 
     Route::get('/gensemanal/search', [RegistroSemanalController::class, 'search'])->name('gensemanal.search')->middleware(['can:Acceso a Inicio']);
     Route::resource('/gensemanal', RegistroSemanalController::class)->middleware(['can:Acceso a Inicio']);
+    Route::delete('gensemanal/delete-week/{fecha}', [RegistroSemanalController::class, 'destroyWeek'])->name('gensemanal.destroyWeek')->middleware(['can:Acceso a Inicio']);
     Route::get('/gensemanal/edit/{fecha}/{turno}', [RegistroSemanalController::class, 'edit'])->name('gensemanal.editAll')->middleware(['can:Acceso a Inicio']);
-    Route::get('/gensemanal/show/{fecha}/{turno}', [RegistroSemanalController::class, 'show'])->name('gensemanal.showAll')->middleware(['can:Acceso a Inicio']);
+    Route::get('/gensemanal/edit-week/{fecha}', [RegistroSemanalController::class, 'editWeek'])->name('gensemanal.editWeek')->middleware(['can:Acceso a Inicio']);
+    Route::get('/gensemanal/show/{fecha}', [RegistroSemanalController::class, 'show'])->name('gensemanal.showAll')->middleware(['can:Acceso a Inicio']);
     Route::put('/gensemanal', [RegistroSemanalController::class, 'updateAll'])->name('gensemanal.updateAll')->middleware(['can:Acceso a Inicio']);
-    Route::get('/gensemanal/pdf/{fecha}/{turno}', [RegistroSemanalController::class, 'GenerarPDF'])->name('gensemanal.pdf')->middleware(['can:Acceso a Inicio']);
-    Route::get('/gensemanal/excel/{fecha}/{turno}', [RegistroSemanalController::class, 'GenerarExcel'])->name('gensemanal.excel')->middleware(['can:Acceso a Inicio']);
+    Route::get('/gensemanal/pdf/{fecha}', [RegistroSemanalController::class, 'GenerarPDF'])->name('gensemanal.pdf')->middleware(['can:Acceso a Inicio']);
+    Route::get('/gensemanal/excel/{fecha}', [RegistroSemanalController::class, 'GenerarExcel'])->name('gensemanal.excel')->middleware(['can:Acceso a Inicio']);
 
     // Rutas para obtener datos de cada gráfica de manera dinámica de los residuos semanales
     Route::get('/graficassemanal', [GraficasSemanalController::class, 'index'])->name('graficassemanal.index')->middleware(['can:Acceso a Graficas']);

@@ -16,7 +16,6 @@
         <form action="{{ route('admin.zonas.update', $zona) }}" method="POST">
 
             @csrf
-
             @method('PUT')
 
             <x-validation-errors class="mb-4" />
@@ -33,7 +32,6 @@
                 <x-label class="mb-1">
                     Descripción de la zona
                 </x-label>
-
                 <x-textarea class="w-full" name="descripcion" placeholder="Sin descripción...">
                     {{ old('descripcion', $zona->descripcion) }}
                 </x-textarea>
@@ -43,7 +41,6 @@
                 <x-label class="mb-1">
                     Instituto perteneciente
                 </x-label>
-
                 <p class="text-gray-700 font-medium">
                     {{ auth()->user()->instituto?->nombre ?? 'Ninguno' }}
                 </p>
@@ -51,48 +48,53 @@
             </div>
 
             <div class="mb-4">
-                <ul>
-                    @foreach($areas as $area)
-                        <li>
-                            <label>
-                                <x-checkbox name='areas[]' value="{{$area->id}}" 
-                                    :checked="in_array($area->id, old('areas', $zona->areas->pluck('id')->toArray()))" />
-                                {{$area->nombre}}
-                            </label>
-                        </li>
-                    @endforeach
-                </ul>
-            </div>
+                <x-label class="mb-2">
+                    Áreas que pertenecen a esta Zona
+                </x-label>
 
+                <div class="border rounded-lg p-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+                    @foreach ($areas as $area)
+                        <div class="flex items-center">
+                            <input type="checkbox" name="areas[]" id="area_{{ $area->id }}"
+                                value="{{ $area->id }}"
+                                class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                                {{-- 
+                                     Esta es la lógica clave para 'editar':
+                                     Revisa 'old' (si falló la validación) O los datos guardados en la BD.
+                                   --}} @if (in_array($area->id, old('areas', $zona->areas->pluck('id')->toArray()))) checked @endif>
+                            <label for="area_{{ $area->id }}" class="ml-3 block text-sm text-gray-700">
+                                {{ $area->nombre }}
+                            </label>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
             <div class="flex justify-end">
                 <x-button>
                     Actualizar Zona
                 </x-button>
 
-                {{-- Onclick para que al precionarlo se active la funcion y se ejecute el segundo formulario
-                para eliminar --}}
-                <x-danger-button class="ml-2" onclick="deleteZona()">
+                <x-danger-button class="ml-2" type="button" onclick="deleteZona()">
                     Eliminar
                 </x-danger-button>
             </div>
         </form>
 
         <form action="{{ route('admin.zonas.destroy', $zona) }}" method="POST" id="formDelete">
-
             @csrf
             @method('DELETE')
-
         </form>
 
-        @push('js')
-            <Script>
-                function deleteZona() {
-                    let form = document.getElementById('formDelete');
-                    form.submit();
-                }
-            </Script>
-        @endpush
-
     </div>
+
+    @push('js')
+        <Script>
+            function deleteZona() {
+                // (Aquí puedes añadir una confirmación si quieres)
+                let form = document.getElementById('formDelete');
+                form.submit();
+            }
+        </Script>
+    @endpush
 
 </x-admin-layout>
