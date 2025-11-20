@@ -18,4 +18,9 @@ class Subproducto extends Model
     {
         return $this->hasMany(GenSubproducto::class);
     }
+
+    public function categoria()
+    {
+        return $this->belongsTo(Categoria::class);
+    }
 }

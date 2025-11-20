@@ -101,50 +101,71 @@
                                         $datosDelDia = $lookupDataSemanal[$fechaIter] ?? []; // Busca los datos para ESTE día
                                     @endphp
 
-                                    @if (!empty($datosDelDia))
-                                        <div class="border rounded-md p-4 shadow-sm">
-                                            <h4 class="text-md font-semibold text-gray-800 mb-3 border-b pb-2">
+                                    {{-- Quitamos el 'if empty' para mostrar todos los días aunque estén vacíos --}}
+                                    <div
+                                        class="border rounded-md p-4 shadow-sm {{ empty($datosDelDia) ? 'bg-gray-50' : '' }}">
+                                        <h4
+                                            class="text-md font-semibold text-gray-800 mb-3 border-b pb-2 flex justify-between">
+                                            <span>
                                                 {{ $fechaActual->isoFormat('dddd, D [de] MMMM') }}
                                                 ({{ $fechaActual->format('d/m/Y') }})
-                                            </h4>
+                                            </span>
+                                            @if (empty($datosDelDia))
+                                                <span class="text-xs font-normal text-gray-400 italic">Sin registros
+                                                    capturados</span>
+                                            @endif
+                                        </h4>
 
-                                            @foreach ($zonas as $zona)
-                                                <div class="mb-4">
-                                                    <p class="text-sm font-bold text-gray-700 mb-2">{{ $zona->nombre }}
-                                                    </p>
+                                        @foreach ($zonas as $zona)
+                                            <div class="mb-4">
+                                                <p class="text-sm font-bold text-gray-700 mb-2">{{ $zona->nombre }}</p>
 
-                                                    <div class="grid grid-cols-3 gap-x-4 gap-y-2 pl-4">
-                                                        @foreach ($zona->areas as $area)
-                                                            <div>
-                                                                <p class="text-xs font-semibold text-gray-600 mb-1">
-                                                                    {{ $area->nombre }}</p>
-                                                                <div class="pl-2 border-l">
-                                                                    @foreach ($area->subproductos as $subproducto)
+                                                <div class="grid grid-cols-3 gap-x-4 gap-y-2 pl-4">
+                                                    @foreach ($zona->areas as $area)
+                                                        <div>
+                                                            <p class="text-xs font-semibold text-gray-600 mb-1">
+                                                                {{ $area->nombre }}
+                                                            </p>
+
+                                                            <div class="pl-2 border-l">
+                                                                {{-- ▼▼ AQUÍ ESTÁ EL CAMBIO: FILTRADO POR ÁREA ▼▼ --}}
+                                                                @php
+                                                                    // Obtenemos solo las categorías configuradas para esta área
+                                                                    $categoriasDelArea = $area->subproductos
+                                                                        ->pluck('categoria')
+                                                                        ->unique('id')
+                                                                        ->sortBy('nombre');
+                                                                @endphp
+
+                                                                @foreach ($categoriasDelArea as $categoria)
+                                                                    @if ($categoria)
                                                                         @php
-                                                                            // Buscamos el valor para este día, área y subproducto
                                                                             $kilos =
                                                                                 $datosDelDia[$area->id][
-                                                                                    $subproducto->id
+                                                                                    $categoria->id
                                                                                 ] ?? 0;
                                                                         @endphp
-                                                                        @if ($kilos > 0)
-                                                                            <div class="text-xs flex justify-between">
-                                                                                <span
-                                                                                    class="text-gray-500">{{ $subproducto->nombre }}:</span>
-                                                                                <span
-                                                                                    class="font-medium text-gray-800">{{ number_format($kilos, 2) }}
-                                                                                    kg</span>
-                                                                            </div>
-                                                                        @endif
-                                                                    @endforeach
-                                                                </div>
+
+                                                                        {{-- Mostramos siempre, incluso si es 0, porque pertenece al área --}}
+                                                                        <div
+                                                                            class="text-xs flex justify-between border-b border-gray-100 py-0.5">
+                                                                            <span
+                                                                                class="text-gray-500">{{ $categoria->nombre }}:</span>
+                                                                            <span
+                                                                                class="font-medium {{ $kilos > 0 ? 'text-gray-800' : 'text-gray-400' }}">
+                                                                                {{ number_format($kilos, 2) }} kg
+                                                                            </span>
+                                                                        </div>
+                                                                    @endif
+                                                                @endforeach
+                                                                {{-- ▲▲ FIN DEL CAMBIO ▲▲ --}}
                                                             </div>
-                                                        @endforeach
-                                                    </div>
+                                                        </div>
+                                                    @endforeach
                                                 </div>
-                                            @endforeach
-                                        </div>
-                                    @endif
+                                            </div>
+                                        @endforeach
+                                    </div>
 
                                     @php $fechaActual->addDay(); @endphp
                                 @endwhile

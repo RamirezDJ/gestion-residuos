@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\InstitutoController;
 use App\Http\Controllers\Admin\PermissionController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\SubprodcutosController;
+use App\Http\Controllers\Admin\CategoriaController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\ZonaController;
 use Illuminate\Support\Facades\Route;
@@ -22,15 +23,18 @@ Route::resource('/areas', AreaController::class)
     ->middleware(['can:Acceso a Areas']);
 
 Route::get('/areas/{area}/subproductos', [AreaController::class, 'editSubproductos'])
-     ->name('admin.areas.editSubproductos')
-     ->middleware(['can:Acceso a Areas']);
+    ->name('admin.areas.editSubproductos')
+    ->middleware(['can:Acceso a Areas']);
 
 Route::put('/areas/{area}/subproductos', [AreaController::class, 'updateSubproductos'])
-     ->name('admin.areas.updateSubproductos')
-     ->middleware(['can:Acceso a Areas']);
+    ->name('admin.areas.updateSubproductos')
+    ->middleware(['can:Acceso a Areas']);
 
 Route::resource('/subproductos', SubprodcutosController::class)
     ->middleware(['can:Acceso a Subproductos']);
+
+Route::resource('categorias', CategoriaController::class)
+    ->middleware(['can:Gestion de Categorias']);
 
 Route::resource('/roles', RoleController::class)
     ->except('show')->middleware(['can:Gestion de Roles']);

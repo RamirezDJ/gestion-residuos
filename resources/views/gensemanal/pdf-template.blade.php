@@ -6,7 +6,6 @@
     <title>Gestión de Residuos - Reporte Semanal</title>
 
     <style>
-        /* --- ESTILOS DE TU DISEÑO ORIGINAL (Ligeramente ajustados) --- */
         @page {
             margin: 1cm;
         }
@@ -14,7 +13,6 @@
         body {
             font-family: 'Helvetica', 'Arial', sans-serif;
             font-size: 9pt;
-            /* Un poco más pequeño para que quepa más */
             line-height: 1.4;
             color: #333;
             margin: 0;
@@ -37,7 +35,6 @@
 
         .title {
             font-size: 16pt;
-            /* Ajustado */
             font-weight: bold;
             margin: 0;
             text-transform: uppercase;
@@ -57,17 +54,21 @@
             padding-bottom: 5pt;
         }
 
-        /* Tabla de Resumen (Datos Generales) */
-        .summary-table {
+        /* Tablas */
+        .summary-table,
+        .data-table {
             width: 100%;
             border-collapse: collapse;
             margin-bottom: 15pt;
-            font-size: 10pt;
+            font-size: 9pt;
         }
 
-        .summary-table td {
-            padding: 6pt;
+        .summary-table td,
+        .data-table td,
+        .data-table th {
             border: 0.5pt solid #ddd;
+            padding: 6pt;
+            text-align: left;
         }
 
         .summary-table tr:nth-child(even) {
@@ -84,51 +85,38 @@
             color: #cc0303;
         }
 
-        /* Tabla de Desglose (Datos por día/zona) */
-        .data-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 15pt;
-            font-size: 9pt;
-        }
-
-        .data-table th,
-        .data-table td {
-            padding: 6pt;
-            text-align: left;
-            border: 0.5pt solid #ddd;
-            word-wrap: break-word;
-        }
-
         .data-table th {
             background-color: #611232;
             color: white;
             font-weight: bold;
         }
 
-        .data-table .zona-header {
-            background-color: #f3f3f3;
-            font-size: 11pt;
+        .zona-header {
+            background-color: #e9ecef;
             font-weight: bold;
-            color: #333;
+            color: #1a202c;
+            font-size: 10pt;
         }
 
-        .data-table .area-header {
+        .area-header {
+            background-color: #f8f9fa;
             font-weight: bold;
-            padding-left: 15px;
-            background-color: #fafafa;
+            color: #4a5568;
+            padding-left: 15pt;
         }
 
-        .data-table .subproducto-row td {
-            padding-left: 30px;
+        .subproducto-row td:first-child {
+            padding-left: 30pt;
+        }
+
+        .zero-value {
+            color: #999;
         }
 
         /* Pie de página */
         .footer {
             position: fixed;
-            /* Cambiado para dompdf */
             bottom: -0.5cm;
-            /* Ajusta según sea necesario */
             left: 0cm;
             right: 0cm;
             height: 1cm;
@@ -157,6 +145,7 @@
             <h1 class="title">Gestión de residuos sólidos institucionales</h1>
         </div>
 
+        {{-- RESUMEN --}}
         <div class="section">
             <h2 class="section-title">Resumen de Datos Semanales</h2>
             <table class="summary-table">
@@ -170,101 +159,115 @@
                 </tr>
                 <tr>
                     <td class="data-label">Total generado en la semana:</td>
-                    <td class="highlight">
-                        {{ number_format($totalGeneradoSemana, 2) }} kg
-                    </td>
+                    <td class="highlight">{{ number_format($totalGeneradoSemana, 2) }} kg</td>
                 </tr>
                 <tr>
                     <td class="data-label">Zona con mayor generación:</td>
-                    <td class="highlight">
-                        {{ $zonaMayorNombreSemana }}
-                        ({{ number_format($zonaMayorTotalSemana, 2) }} kg)
-                    </td>
+                    <td class="highlight">{{ $zonaMayorNombreSemana }}
+                        ({{ number_format($zonaMayorTotalSemana, 2) }} kg)</td>
                 </tr>
             </table>
         </div>
+
+        {{-- DESGLOSE DIARIO --}}
         <div class="section">
             <h2 class="section-title">Desglose de Datos por Día y Subproducto</h2>
 
             @php
-                $fechaActual = \Carbon\Carbon::createFromFormat('d/m/Y', $fechaInicioFormateada, 'Europe/London');
-                $fechaFin = \Carbon\Carbon::createFromFormat('d/m/Y', $fechaFinFormateada, 'Europe/London');
+                // Fechas manuales para evitar problemas de zona horaria
+                $fechaActual = \Carbon\Carbon::parse($fechaInicioSemana)->startOfDay();
+                $fechaFin = \Carbon\Carbon::parse($fechaFinSemana)->endOfDay();
             @endphp
 
-            @while ($fechaActual <= $fechaFin)
+            @while ($fechaActual->lte($fechaFin))
                 @php
                     $fechaIter = $fechaActual->format('Y-m-d');
-                    $datosDelDia = $lookupDataSemanal[$fechaIter] ?? []; // Busca los datos para ESTE día
+                    $datosDelDia = $lookupDataSemanal[$fechaIter] ?? [];
                 @endphp
 
-                @if (!empty($datosDelDia))
-                    <table class="data-table">
-                        <thead>
+                {{-- Tabla del Día (Siempre se muestra) --}}
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th colspan="3">
+                                {{ $fechaActual->locale('es')->isoFormat('dddd, D [de] MMMM') }}
+                                ({{ $fechaActual->format('d/m/Y') }})
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{-- Bucle de Zonas (Sin filtro, siempre se muestran) --}}
+                        @foreach ($zonas as $zona)
                             <tr>
-                                <th colspan="3">
-                                    {{ $fechaActual->isoFormat('dddd, D [de] MMMM') }}
-                                    ({{ $fechaActual->format('d/m/Y') }})
-                                </th>
+                                <td colspan="3" class="zona-header">
+                                    Zona: {{ $zona->nombre }}
+                                </td>
                             </tr>
-                        </thead>
-                        <tbody>
-                            @foreach ($zonas as $zona)
+
+                            {{-- Bucle de Áreas (Sin filtro, siempre se muestran) --}}
+                            @foreach ($zona->areas as $area)
+                                <tr>
+                                    <td colspan="3" class="area-header">
+                                        Área: {{ $area->nombre }}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="padding-left: 30px; font-weight: bold; background-color: #fff;">Categoría
+                                    </td>
+                                    <td style="font-weight: bold; background-color: #fff;">Kilos (kg)</td>
+                                    <td style="font-weight: bold; background-color: #fff;">Turno(s)</td>
+                                </tr>
+
+                                {{-- Categorías filtradas por la configuración del área --}}
                                 @php
-                                    // Revisamos si esta zona tiene datos ESE DÍA
-                                    $zonaTieneDatos = false;
-                                    foreach ($zona->areas as $area) {
-                                        if (isset($datosDelDia[$area->id])) {
-                                            $zonaTieneDatos = true;
-                                            break;
-                                        }
-                                    }
+                                    $categoriasDelArea = $area->subproductos
+                                        ->pluck('categoria')
+                                        ->unique('id')
+                                        ->sortBy('nombre');
+                                    $datosDelArea = $datosDelDia[$area->id] ?? [];
                                 @endphp
 
-                                @if ($zonaTieneDatos)
-                                    <tr>
-                                        <td colspan="3" class="zona-header">
-                                            Zona: {{ $zona->nombre }}
-                                        </td>
-                                    </tr>
-
-                                    @foreach ($zona->areas as $area)
+                                @forelse ($categoriasDelArea as $categoria)
+                                    @if ($categoria)
                                         @php
-                                            $datosDelArea = $datosDelDia[$area->id] ?? [];
+                                            $kilos = $datosDelArea[$categoria->id] ?? 0;
                                         @endphp
 
-                                        @if (!empty($datosDelArea))
-                                            <tr>
-                                                <td colspan="3" class="area-header">
-                                                    Área: {{ $area->nombre }}
-                                                </td>
-                                            </tr>
-                                            <tr>
-                                                <td style="padding-left: 30px; font-weight: bold;">Subproducto</td>
-                                                <td style="font-weight: bold;">Kilos (kg)</td>
-                                                <td style="font-weight: bold;">Turno(s)</td>
-                                            </tr>
+                                        <tr class="subproducto-row">
+                                            <td>{{ $categoria->nombre }}</td>
 
-                                            @foreach ($area->subproductos as $subproducto)
-                                                @php
-                                                    $kilos = $datosDelArea[$subproducto->id] ?? 0;
-                                                @endphp
+                                            {{-- Si es 0, lo ponemos en gris para diferenciar --}}
+                                            <td class="{{ $kilos == 0 ? 'zero-value' : '' }}">
+                                                {{ number_format($kilos, 2) }} kg
+                                            </td>
 
+                                            <td>
                                                 @if ($kilos > 0)
-                                                    <tr class="subproducto-row">
-                                                        <td>{{ $subproducto->nombre }}</td>
-                                                        <td>{{ number_format($kilos, 2) }} kg</td>
-                                                        <td>{{ $datosSemana->where('fecha', $fechaIter)->pluck('turno')->unique()->implode(', ') }}
-                                                        </td>
-                                                    </tr>
+                                                    {{ $datosSemana->where('fecha', $fechaIter)->where('area_id', $area->id)->where('categoria_id', $categoria->id)->pluck('turno')->unique()->implode(', ') }}
+                                                @else
+                                                    -
                                                 @endif
-                                            @endforeach
-                                        @endif
-                                    @endforeach
-                                @endif
+                                            </td>
+                                        </tr>
+                                    @endif
+                                @empty
+                                    {{-- Si un área no tiene categorías configuradas --}}
+                                    <tr>
+                                        <td colspan="3" style="padding-left: 30px; color: #999; font-style: italic;">
+                                            No hay categorías asignadas a esta área.
+                                        </td>
+                                    </tr>
+                                @endforelse
                             @endforeach
-                        </tbody>
-                    </table>
-                @endif @php $fechaActual->addDay(); @endphp
+                        @endforeach
+                    </tbody>
+                </table>
+
+                @php $fechaActual->addDay(); @endphp
+
+                {{-- Salto de página opcional después de cada día o cada 2 días si queda muy largo --}}
+                {{-- <div class="page-break"></div> --}}
+
             @endwhile
         </div>
     </div>

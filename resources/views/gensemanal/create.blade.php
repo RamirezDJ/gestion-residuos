@@ -60,8 +60,7 @@
                                     placeholder="Seleccionar fecha" value="{{ old('fecha_final') }}" required>
                             </div>
                         </div>
-                        <div class="w-1/2 px-2 mb-4"> <!-- Agregamos px-2 para un pequeño margen entre los divs -->
-                            <x-label class="mb-2">
+                        <div class="w-1/2 px-2 mb-4"> <x-label class="mb-2">
                                 Turno de la generacion
                             </x-label>
                             <div class="relative">
@@ -78,8 +77,7 @@
                                 </x-select>
                             </div>
                         </div>
-                        <div class="w-full px-2 mb-4"> <!-- Agregamos px-2 para un pequeño margen entre los divs -->
-                            <x-label class="mb-2">
+                        <div class="w-full px-2 mb-4"> <x-label class="mb-2">
                                 Instituto Asignado
                             </x-label>
                             <div class="relative">
@@ -88,7 +86,6 @@
                             </div>
                         </div>
                     </div>
-
 
                     {{-- Inicio bitacora de generacion semanal (Cada zona con sus areas) --}}
 
@@ -123,44 +120,63 @@
                         </button>
                     </div>
 
-
                     <template id="dia-template">
                         <div class="dia-registro border-b-2 pb-4 mb-4">
+                            {{-- Título del día (se llena con JS) --}}
                             <h3 class="text-xl font-semibold text-gray-700 mb-3 dia-titulo"></h3>
 
                             @foreach ($zonas as $zona)
+                                {{-- Título de la Zona --}}
                                 <div class="text-gray-600 mb-2">
                                     <p class="text-lg font-bold mb-4">{{ $zona->nombre }}</p>
                                 </div>
 
-                                <div class="grid grid-cols-4 mb-4 border-b-2 pb-4">
+                                {{-- Grid de Áreas --}}
+                                <div
+                                    class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-4 border-b-2 pb-4">
 
                                     @foreach ($zona->areas as $area)
                                         <div class="mb-4 col-span-1">
 
+                                            {{-- Nombre del Área --}}
                                             <h4 class="text-md font-semibold text-gray-800 mb-2">
-                                                {{ $area->nombre }} </h4>
+                                                {{ $area->nombre }}
+                                            </h4>
 
-                                            <div class="pl-3">
-                                                @foreach ($area->subproductos as $subproducto)
-                                                    <div class="mb-2">
-                                                        <x-label class="mb-1 text-sm font-normal">
-                                                            {{ $subproducto->nombre }}
-                                                        </x-label>
+                                            {{-- LÓGICA INTELIGENTE: Obtenemos categorías a través de los subproductos --}}
+                                            @php
+                                                // Sacamos los subproductos, obtenemos su categoría, filtramos únicas y ordenamos
+                                                $categoriasDelArea = $area->subproductos
+                                                    ->pluck('categoria')
+                                                    ->unique('id')
+                                                    ->sortBy('nombre');
+                                            @endphp
 
-                                                        <x-input type="number" step="0.01" placeholder="0kg"
-                                                            name="TEMPLATE_NAME[{{ $zona->id }}][{{ $area->id }}][{{ $subproducto->id }}]"
-                                                            value="" />
-                                                    </div>
+                                            {{-- Lista de Inputs (Solo las categorías de esta área) --}}
+                                            <div class="pl-3 space-y-2">
+                                                @foreach ($categoriasDelArea as $categoria)
+                                                    {{-- Si la categoría es válida (no nula) --}}
+                                                    @if ($categoria)
+                                                        <div class="mb-2">
+                                                            <x-label class="mb-1 text-sm font-normal text-gray-600">
+                                                                {{ $categoria->nombre }}
+                                                            </x-label>
+
+                                                            <x-input type="number" step="0.01" placeholder="0kg"
+                                                                class="w-full" {{-- Usamos cat_ID para el controlador --}}
+                                                                name="TEMPLATE_NAME[{{ $zona->id }}][{{ $area->id }}][cat_{{ $categoria->id }}]"
+                                                                value="" />
+                                                        </div>
+                                                    @endif
                                                 @endforeach
                                             </div>
-
                                         </div>
                                     @endforeach
                                 </div>
                             @endforeach
                         </div>
                     </template>
+
                     <div id="seccion-submit-final" class="flex justify-between items-baseline pt-4"
                         style="display: none;">
                         <div class="flex items-center mb-4">
@@ -177,6 +193,10 @@
             </div>
         </div>
     </div>
+
+    {{-- Scripts --}}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pikaday/1.8.2/pikaday.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/pikaday/1.8.2/css/pikaday.min.css">
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
