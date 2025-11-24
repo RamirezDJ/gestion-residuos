@@ -89,64 +89,98 @@
                                 Datos Generados desglosados
                             </h3>
                             <p class="mt-1 max-w-2xl text-sm text-gray-500">
-                                Todos los datos generados de Subproductos
+                                Datos organizados por Zona y Subproducto
                             </p>
                         </div>
+
+                        {{-- Scrollbar Container --}}
                         <div class="border-t border-gray-200 px-4 py-5 sm:p-0 max-h-[500px] overflow-y-auto">
-                            {{-- Aqui dentro de este contenedor debes poner el scrollbar vertical para que la pagina no se alargue demasiado si hay muchos datos --}}
-                            <div class="p-4">
-                                @foreach ($datosAgrupados as $subproducto => $datos)
-                                    <div class="overflow-hidden rounded-lg border shadow mb-5">
-                                        <table class="w-full text-sm leading-5">
-                                            <thead class="bg-gray-100">
-                                                <tr>
-                                                    <th class="py-3 px-4 text-center text-base font-semibold text-gray-600"
-                                                        colspan="8">{{ $subproducto }}
-                                                    </th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <!-- Fila de Fechas -->
-                                                @php
-                                                    $fechaChunks = array_chunk($datos->pluck('fecha')->toArray(), 6);
-                                                    $cantidadChunks = array_chunk(
-                                                        $datos->pluck('total_kg')->toArray(),
-                                                        6,
-                                                    );
-                                                @endphp
-                                                @foreach ($fechaChunks as $index => $fechaChunk)
-                                                    <tr class="border-t border-gray-300">
-                                                        <td class="py-3 px-4 text-left font-bold">Fecha:</td>
-                                                        @foreach ($fechaChunk as $fecha)
-                                                            <td class="py-3 px-4 text-left">
-                                                                {{ \Carbon\Carbon::parse($fecha)->format('d/m/Y') }}
-                                                            </td>
+                            <div class="p-4 space-y-6">
+
+                                {{-- 1. PRIMER BUCLE: Iteramos las ZONAS --}}
+                                @foreach ($datosAgrupados as $zonaNombre => $listaSubproductos)
+                                    <div class="mb-8 bg-gray-50 rounded-xl border border-gray-200 p-4 shadow-sm">
+                                        {{-- Título de la ZONA --}}
+                                        <h2
+                                            class="text-xl font-semibold text-gray-800 mb-4 border-b border-gray-200 pb-2 flex items-center gap-2">
+
+                                            Zona: {{ $zonaNombre }}
+                                        </h2>
+
+                                        {{-- 2. SEGUNDO BUCLE: Iteramos los SUBPRODUCTOS dentro de esa zona --}}
+                                        @foreach ($listaSubproductos as $subproductoNombre => $datos)
+                                            <div
+                                                class="overflow-hidden rounded-lg border bg-white shadow mb-6 last:mb-0">
+                                                <table class="w-full text-sm leading-5">
+                                                    <thead class="bg-gray-100">
+                                                        <tr>
+                                                            {{-- Título del SUBPRODUCTO --}}
+                                                            <th class="py-3 px-4 text-center text-base font-semibold text-gray-700"
+                                                                colspan="8">
+                                                                {{ $subproductoNombre }}
+                                                            </th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        @php
+                                                            $fechaChunks = array_chunk(
+                                                                $datos->pluck('fecha')->toArray(),
+                                                                6,
+                                                            );
+                                                            $cantidadChunks = array_chunk(
+                                                                $datos->pluck('total_kg')->toArray(),
+                                                                6,
+                                                            );
+                                                        @endphp
+
+                                                        @foreach ($fechaChunks as $index => $fechaChunk)
+                                                            <tr class="border-t border-gray-300 bg-gray-50/50">
+                                                                <td class="py-3 px-4 text-left font-bold text-gray-800">
+                                                                    Fecha:</td>
+                                                                @foreach ($fechaChunk as $fecha)
+                                                                    <td class="py-3 px-4 text-left text-xs">
+                                                                        {{ \Carbon\Carbon::parse($fecha)->format('d/m/Y') }}
+                                                                    </td>
+                                                                @endforeach
+                                                                {{-- Rellenar vacíos --}}
+                                                                @foreach (array_pad($fechaChunk, 6, '') as $fecha)
+                                                                    @if ($fecha === '')
+                                                                        <td class="py-3 px-4"></td>
+                                                                    @endif
+                                                                @endforeach
+                                                            </tr>
+
+                                                            <tr>
+                                                                <td class="py-3 px-4 text-left font-bold text-gray-800">
+                                                                    Cantidad Generada:</td>
+                                                                @foreach ($cantidadChunks[$index] as $cantidad)
+                                                                    <td
+                                                                        class="py-3 px-4 text-left font-medium text-gray-800">
+                                                                        {{ number_format($cantidad, 2) }}
+                                                                    </td>
+                                                                @endforeach
+                                                                {{-- Rellenar vacíos --}}
+                                                                @foreach (array_pad($cantidadChunks[$index], 6, '') as $cantidad)
+                                                                    @if ($cantidad === '')
+                                                                        <td class="py-3 px-4"></td>
+                                                                    @endif
+                                                                @endforeach
+                                                            </tr>
                                                         @endforeach
-                                                        <!-- Rellenar celdas vacías si la fila tiene menos de 6 columnas -->
-                                                        @foreach (array_pad($fechaChunk, 6, '') as $fecha)
-                                                            @if ($fecha === '')
-                                                                <td class="py-3 px-4 text-left"></td>
-                                                            @endif
-                                                        @endforeach
-                                                    </tr>
-                                                    <tr>
-                                                        <td class="py-3 px-4 text-left font-bold">Cantidad Generada:
-                                                        </td>
-                                                        @foreach ($cantidadChunks[$index] as $cantidad)
-                                                            <td class="py-3 px-4 text-left">{{ $cantidad }}</td>
-                                                        @endforeach
-                                                        <!-- Rellenar celdas vacías si la fila tiene menos de 6 columnas -->
-                                                        @foreach (array_pad($cantidadChunks[$index], 6, '') as $cantidad)
-                                                            @if ($cantidad === '')
-                                                                <td class="py-3 px-4 text-left"></td>
-                                                            @endif
-                                                        @endforeach
-                                                    </tr>
-                                                @endforeach
-                                            </tbody>
-                                        </table>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        @endforeach {{-- Fin Subproductos --}}
                                     </div>
-                                @endforeach
+                                @endforeach {{-- Fin Zonas --}}
+
+                                {{-- Mensaje si no hay datos --}}
+                                @if ($datosAgrupados->isEmpty())
+                                    <div class="text-center text-gray-500 py-10">
+                                        No hay datos registrados para este rango de fechas.
+                                    </div>
+                                @endif
+
                             </div>
                         </div>
                     </div>

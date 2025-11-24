@@ -159,15 +159,21 @@
                 </tr>
                 <tr>
                     <td class="data-label">Total generado en la semana:</td>
-                    <td class="highlight">{{ number_format($totalGeneradoSemana, 2) }} kg</td>
+                    <td class="highlight">
+                        {{ number_format($totalGeneradoSemana, 2) }} kg
+                    </td>
                 </tr>
                 <tr>
                     <td class="data-label">Zona con mayor generación:</td>
-                    <td class="highlight">{{ $zonaMayorNombreSemana }}
-                        ({{ number_format($zonaMayorTotalSemana, 2) }} kg)</td>
+                    <td class="highlight">
+                        {{ $zonaMayorNombreSemana }}
+                        ({{ number_format($zonaMayorTotalSemana, 2) }} kg)
+                    </td>
                 </tr>
             </table>
         </div>
+
+        <div class="page-break"></div>
 
         {{-- DESGLOSE DIARIO --}}
         <div class="section">
@@ -185,7 +191,6 @@
                     $datosDelDia = $lookupDataSemanal[$fechaIter] ?? [];
                 @endphp
 
-                {{-- Tabla del Día (Siempre se muestra) --}}
                 <table class="data-table">
                     <thead>
                         <tr>
@@ -196,7 +201,6 @@
                         </tr>
                     </thead>
                     <tbody>
-                        {{-- Bucle de Zonas (Sin filtro, siempre se muestran) --}}
                         @foreach ($zonas as $zona)
                             <tr>
                                 <td colspan="3" class="zona-header">
@@ -204,7 +208,6 @@
                                 </td>
                             </tr>
 
-                            {{-- Bucle de Áreas (Sin filtro, siempre se muestran) --}}
                             @foreach ($zona->areas as $area)
                                 <tr>
                                     <td colspan="3" class="area-header">
@@ -212,61 +215,63 @@
                                     </td>
                                 </tr>
                                 <tr>
-                                    <td style="padding-left: 30px; font-weight: bold; background-color: #fff;">Categoría
-                                    </td>
-                                    <td style="font-weight: bold; background-color: #fff;">Kilos (kg)</td>
-                                    <td style="font-weight: bold; background-color: #fff;">Turno(s)</td>
+                                    <td style="padding-left: 30px; font-weight: bold;">Categoría</td>
+                                    <td style="font-weight: bold;">Kilos (kg)</td>
+                                    <td style="font-weight: bold;">Turno(s)</td>
                                 </tr>
 
-                                {{-- Categorías filtradas por la configuración del área --}}
                                 @php
+                                    // FILTRADO: Obtenemos las categorías de esta área
                                     $categoriasDelArea = $area->subproductos
                                         ->pluck('categoria')
                                         ->unique('id')
                                         ->sortBy('nombre');
-                                    $datosDelArea = $datosDelDia[$area->id] ?? [];
                                 @endphp
 
-                                @forelse ($categoriasDelArea as $categoria)
+                                @foreach ($categoriasDelArea as $categoria)
                                     @if ($categoria)
                                         @php
-                                            $kilos = $datosDelArea[$categoria->id] ?? 0;
+                                            // Buscamos los kilos (o 0 si no hay)
+                                            $kilos = $datosDelDia[$area->id][$categoria->id] ?? 0;
+
+                                            // LÓGICA DE TURNO:
+                                            // 1. Intentamos buscar turnos específicos para este registro
+                                            $turnosEncontrados = $datosSemana
+                                                ->where('fecha', $fechaIter)
+                                                ->where('area_id', $area->id)
+                                                ->where('categoria_id', $categoria->id)
+                                                ->pluck('turno')
+                                                ->unique();
+
+                                            // 2. Si encontramos turnos, los unimos. Si no, usamos el default de la semana
+                                            $turnoAMostrar = $turnosEncontrados->isNotEmpty()
+                                                ? $turnosEncontrados->implode(', ')
+                                                : $turnoSemana ?? '-';
                                         @endphp
 
                                         <tr class="subproducto-row">
                                             <td>{{ $categoria->nombre }}</td>
 
-                                            {{-- Si es 0, lo ponemos en gris para diferenciar --}}
                                             <td class="{{ $kilos == 0 ? 'zero-value' : '' }}">
                                                 {{ number_format($kilos, 2) }} kg
                                             </td>
 
                                             <td>
-                                                @if ($kilos > 0)
-                                                    {{ $datosSemana->where('fecha', $fechaIter)->where('area_id', $area->id)->where('categoria_id', $categoria->id)->pluck('turno')->unique()->implode(', ') }}
-                                                @else
-                                                    -
-                                                @endif
+                                                {{ $turnoAMostrar }}
                                             </td>
                                         </tr>
                                     @endif
-                                @empty
-                                    {{-- Si un área no tiene categorías configuradas --}}
-                                    <tr>
-                                        <td colspan="3" style="padding-left: 30px; color: #999; font-style: italic;">
-                                            No hay categorías asignadas a esta área.
-                                        </td>
-                                    </tr>
-                                @endforelse
+                                @endforeach
                             @endforeach
                         @endforeach
                     </tbody>
                 </table>
 
-                @php $fechaActual->addDay(); @endphp
+                @if ($fechaActual->lt($fechaFin))
+                    <div class="page-break"></div>
+                @endif
 
-                {{-- Salto de página opcional después de cada día o cada 2 días si queda muy largo --}}
-                {{-- <div class="page-break"></div> --}}
+                @php $fechaActual->addDay(); @endphp
 
             @endwhile
         </div>

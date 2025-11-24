@@ -2,40 +2,44 @@
 
 namespace App\Exports;
 
-use App\Models\GenSubproducto;
+use Carbon\Carbon;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithColumnWidths;
 use Maatwebsite\Excel\Concerns\WithEvents;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithStyles;
+use Maatwebsite\Excel\Concerns\WithCustomStartCell; // <--- 1. IMPORTANTE
 use Maatwebsite\Excel\Events\AfterSheet;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class RegistroSubproductosExport implements FromCollection, WithHeadings, WithStyles, WithColumnWidths, WithEvents
+// 2. Agregamos la interfaz WithCustomStartCell
+class RegistroSubproductosExport implements FromCollection, WithHeadings, WithStyles, WithColumnWidths, WithEvents, WithCustomStartCell
 {
-
+    protected $datosGenerados;
     protected $inicio;
     protected $final;
-    protected $datosGenerados;
 
     public function __construct($datosGenerados, $inicio, $final)
     {
+        $this->datosGenerados = $datosGenerados;
         $this->inicio = $inicio;
         $this->final = $final;
-        $this->datosGenerados = $datosGenerados;
     }
 
-    /**
-     * @return \Illuminate\Support\Collection
-     */
+    // 3. Definimos que los datos (y encabezados automáticos) inicien en la fila 2
+    public function startCell(): string
+    {
+        return 'A2';
+    }
+
     public function collection()
     {
-        return $this->datosGenerados->map(function ($datosGenerados) {
+        return $this->datosGenerados->map(function ($registro) {
             return [
-                'subproducto_id' => $datosGenerados->subproducto_id,
-                'subproducto_nombre' => $datosGenerados->subproducto_nombre,
-                'fecha' => $datosGenerados->fecha,
-                'total_kg' => $datosGenerados->total_kg,
+                'fecha' => Carbon::parse($registro->fecha)->format('d/m/Y'),
+                'zona' => $registro->zona_nombre,
+                'subproducto' => $registro->subproducto_nombre,
+                'total_kg' => number_format((float)$registro->total_kg, 2),
             ];
         });
     }
@@ -43,9 +47,9 @@ class RegistroSubproductosExport implements FromCollection, WithHeadings, WithSt
     public function headings(): array
     {
         return [
-            'Subproducto ID',
-            'Subproducto',
             'Fecha',
+            'Zona',
+            'Subproducto',
             'Total (kg)',
         ];
     }
@@ -53,24 +57,18 @@ class RegistroSubproductosExport implements FromCollection, WithHeadings, WithSt
     public function styles(Worksheet $sheet)
     {
         return [
-            // Estilo para los encabezados
-            1 => ['font' => ['bold' => true]],
-
-            // Opcional: Estilo para una columna específica (ejemplo: B)
-            'B' => ['font' => ['italic' => true]],
-
-            // Estilo general para el resto
-            'A1:G100' => ['alignment' => ['horizontal' => 'center']],
+            2 => ['font' => ['bold' => true]],
+            'A2:D5000' => ['alignment' => ['horizontal' => 'center']],
         ];
     }
 
     public function columnWidths(): array
     {
         return [
-            'A' => 25, // Ancho de la columna A
-            'B' => 35, // Ancho de la columna B
-            'C' => 25,
-            'D' => 20,
+            'A' => 15,
+            'B' => 30,
+            'C' => 30,
+            'D' => 15,
         ];
     }
 
@@ -80,46 +78,26 @@ class RegistroSubproductosExport implements FromCollection, WithHeadings, WithSt
             AfterSheet::class => function (AfterSheet $event) {
                 $sheet = $event->sheet->getDelegate();
 
-                // Agregar el título en la primera fila
-                $sheet->setCellValue('A1', 'Datos Generados en la fecha ' . $this->inicio . '-' . $this->final);
+                $inicioFmt = Carbon::parse($this->inicio)->format('d/m/Y');
+                $finalFmt = Carbon::parse($this->final)->format('d/m/Y');
 
-                // Combinar celdas para el título
+                // Título en A1 (Ahora la fila 1 está vacía gracias a startCell)
+                $sheet->setCellValue('A1', 'Reporte de Subproductos del ' . $inicioFmt . ' al ' . $finalFmt);
+
                 $sheet->mergeCells('A1:D1');
 
-                // Aplicar estilos al título
                 $sheet->getStyle('A1')->applyFromArray([
-                    'font' => [
-                        'bold' => true,
-                        'size' => 14,
-                        'color' => ['argb' => '0a0a0a'],
-                    ],
-                    'alignment' => [
-                        'horizontal' => 'center',
-                        'vertical' => 'center',
-                    ],
+                    'font' => ['bold' => true, 'size' => 14, 'color' => ['argb' => '0a0a0a']],
+                    'alignment' => ['horizontal' => 'center', 'vertical' => 'center'],
                 ]);
-
-                // Ajustar la altura de la fila del título
                 $sheet->getRowDimension('1')->setRowHeight(30);
 
-                // Insertar los encabezados en la fila 2
-                $headings = $this->headings();
-                foreach ($headings as $index => $heading) {
-                    $sheet->setCellValueByColumnAndRow($index + 1, 2, $heading);
-                }
-
-                // Estilo para los encabezados
+                // Estilo de encabezados (que ya están en la fila 2 automáticamente)
                 $sheet->getStyle('A2:D2')->applyFromArray([
-                    'font' => [
-                        'bold' => true,
-                    ],
-                    'alignment' => [
-                        'horizontal' => 'center',
-                        'vertical' => 'center',
-                    ],
+                    'font' => ['bold' => true],
+                    'alignment' => ['horizontal' => 'center', 'vertical' => 'center'],
                 ]);
 
-                // Aplicar el filtro automático a las columnas
                 $sheet->setAutoFilter('A2:D2');
             },
         ];

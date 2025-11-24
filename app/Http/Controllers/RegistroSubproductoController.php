@@ -6,6 +6,7 @@ use App\Exports\RegistroSubproductosExport;
 use App\Models\GenSemanal;
 use App\Models\GenSubproducto;
 use App\Models\Subproducto;
+use App\Models\ZonasAreas;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -25,7 +26,6 @@ class RegistroSubproductoController extends Controller
 
         switch ($tiempo) {
             case 'semanal':
-                // Recuperar los registros agrupados por semana y sumar los valores
                 $registroPeriodo = GenSubproducto::selectRaw(
                     'YEAR(fecha) as year, 
                     WEEK(fecha) as semana, 
@@ -75,11 +75,7 @@ class RegistroSubproductoController extends Controller
                 abort(400, 'Período no válido');
         }
 
-
-
-        // dd($registrosPorSemana);
-
-        return view('gensubproductos.index', compact('registroPeriodo')); // Asegúrate de tener esta vista.
+        return view('gensubproductos.index', compact('registroPeriodo'));
     }
 
 
@@ -88,97 +84,73 @@ class RegistroSubproductoController extends Controller
      */
     public function create()
     {
-        // Llamar a los subproductos registrados
-        $subproductos = Subproducto::all();
+        $institutoId = auth()->user()->instituto_id;
 
-        // Verificar si el usuario está autenticado
-        if (Auth::check()) {
-            // Obtener el instituto del usuario autenticado o null si no tiene uno relacionado
-            $instituto = Auth::user()->instituto ?? null;
-        } else {
-            // Redirigir a la página de inicio de sesión si no está autenticado
-            return redirect()->route('login')->with('error', 'Su sesión ha expirado. Por favor, inicie sesión nuevamente.');
-        }
+        $zonas = \App\Models\Zona::where('instituto_id', $institutoId)->get();
+        $subproductos = \App\Models\Subproducto::all();
 
-        return view('gensubproductos.create', compact('instituto', 'subproductos'));
+        return view('gensubproductos.create', compact('zonas', 'subproductos'));
     }
-
     /**
      * Store a newly created resource in storage.
      */
     public function store(Request $request)
     {
-        // Validar los datos del formulario
+        // Validación básica
         $request->validate([
-            'instituto_id' => 'required|exists:institutos,id',
-            'inicio' => 'required|date|before_or_equal:final',
-            'final' => 'required|date|after_or_equal:inicio',
-            'subproducto' => 'required|array',
-            'subproducto.*.nombre' => 'required|string',
-            'subproducto.*.valor_kg.*' => 'nullable|numeric|regex:/^\d+(\.\d{1,3})?$/|max:100',
+            'valores' => 'required|array',
         ]);
 
-        // Creamos variables para almacenar los datos que llegan del formulario
-        $instituto_id = $request->input('instituto_id');
-        $inicio = Carbon::createFromFormat('m/d/Y', $request->input('inicio'));
-        $final = Carbon::createFromFormat('m/d/Y', $request->input('final'));
-        $subproductos = $request->input('subproducto');
+        $institutoId = auth()->user()->instituto_id;
 
-        // Mantengo en la sesion la fecha de inico y la fecha final
-        session(['inicio' => $inicio, 'final' => $final]);
+        // La estructura que llega es: valores[zona_id][subproducto_id][fecha] = cantidad
+        $valores = $request->input('valores', []);
 
-        // Verificar que el rango de fechas no exceda los 7 días
-        if ($inicio->diffInDays($final) > 6) {
-            return redirect()->back()->withInput()->withErrors(['final' => 'El rango de fechas no puede exceder los 7 días.']);
-        }
+        $batchData = [];
+        $now = now();
 
-        $inicioSemana = $inicio->dayOfWeek;
+        if (count($valores) > 0) {
+            // El primer nivel del array tiene la ZONA como clave ($zonaId)
+            foreach ($valores as $zonaId => $subproductos) {
+                foreach ($subproductos as $subproductoId => $fechas) {
+                    foreach ($fechas as $fecha => $kilos) {
 
-        // Validar que ninguna fecha exceda el rango seleccionado
-        foreach ($subproductos as $subproducto_id => $subproducto) {
-            foreach ($subproducto['valor_kg'] as $dia => $valor_kg) {
-                if (!is_null($valor_kg)) {
-                    // Calcular la fecha correspondiente al día
-                    $dia_numero = (int) str_replace('dia_', '', $dia);
-                    $fecha = $inicio->copy()->addDays(($dia_numero - 1 + (7 - $inicioSemana)) % 7);
-
-                    if ($fecha->greaterThan($final)) {
-                        return redirect()->back()->withInput()->withErrors(['No puedes capturar datos fuera del rango de fecha seleccionado.']);
+                        // Validamos que sea número y mayor a 0
+                        if (is_numeric($kilos) && $kilos > 0) {
+                            $batchData[] = [
+                                'instituto_id'   => $institutoId,
+                                'zona_id'        => $zonaId, // <--- ¡ESTA LÍNEA ES LA QUE FALTABA!
+                                'subproducto_id' => $subproductoId,
+                                'fecha'          => $fecha,
+                                'valor_kg'       => $kilos,
+                                'created_at'     => $now,
+                                'updated_at'     => $now,
+                            ];
+                        }
                     }
                 }
             }
         }
 
-        // Si todas las validaciones pasan, guardo los datos en la ase de datos
-        foreach ($subproductos as $subproducto_id => $subproducto) {
-            foreach ($subproducto['valor_kg'] as $dia => $valor_kg) {
-                if (!is_null($valor_kg)) {
-                    // Calcular la fecha correspondiente al día
-                    $dia_numero = (int) str_replace('dia_', '', $dia);
-                    $fecha = $inicio->copy()->addDays(($dia_numero - 1 + (7 - $inicioSemana)) % 7);
+        // Insertamos
+        if (count($batchData) > 0) {
+            // Usamos una transacción para mayor seguridad
+            \DB::transaction(function () use ($batchData) {
+                \App\Models\GenSubproducto::insert($batchData);
+            });
 
-                    // Crear el registro en la base de datos
-                    GenSubproducto::create([
-                        'fecha' => $fecha,
-                        'valor_kg' => $valor_kg,
-                        'instituto_id' => $instituto_id,
-                        'subproducto_id' => $subproducto_id,
-                    ]);
-                }
-            }
+            return redirect()->route('gensubproductos.index')->with('swal', [
+                'icon' => 'success',
+                'title' => '¡Guardado!',
+                'text' => 'Los registros se han guardado correctamente.',
+            ]);
+        } else {
+            return redirect()->back()->with('swal', [
+                'icon' => 'warning',
+                'title' => 'Sin datos',
+                'text' => 'No ingresaste ninguna cantidad mayor a 0.',
+            ]);
         }
-
-        session()->flash('swal', [
-            'icon' => 'success',
-            'title' => 'Hecho!',
-            'text' => 'Los datos se han guardado con éxito',
-        ]);
-
-        return redirect()->route('gensubproductos.editAll', [
-            'instituto_id' => $instituto_id,
-            'inicio' => $inicio->format('Y-m-d'),
-            'final' => $final->format('Y-m-d'),
-        ]);
     }
 
 
@@ -187,39 +159,37 @@ class RegistroSubproductoController extends Controller
      */
     public function show(Request $request, $instituto_id, $inicio, $final)
     {
+        // Validaciones...
+        if (!Auth::check()) return redirect()->route('login');
 
-        $inicio = Carbon::parse($inicio);
-        $final = Carbon::parse($final);
+        $inicio = \Carbon\Carbon::parse($inicio);
+        $final = \Carbon\Carbon::parse($final);
 
-        // Verificar si el usuario está autenticado
-        if (Auth::check()) {
-            // Obtener el instituto del usuario autenticado o null si no tiene uno relacionado
-            $instituto = Auth::user()->instituto ?? null;
-        } else {
-            // Redirigir a la página de inicio de sesión si no está autenticado
-            return redirect()->route('login')->with('error', 'Su sesión ha expirado. Por favor, inicie sesión nuevamente.');
-        }
-
-        // Consulta de datos generados
-        $datosGenerados = GenSubproducto::select(
-            'subproductos.id as subproducto_id',
+        $datosGenerados = \App\Models\GenSubproducto::select(
+            // Usamos DB::raw para campos calculados o complejos
+            \DB::raw('COALESCE(zonas.nombre, "Sin Zona Asignada") as zona_nombre'),
             'subproductos.nombre as subproducto_nombre',
             'gen_subproductos.fecha',
-            DB::raw('SUM(gen_subproductos.valor_kg) as total_kg')
+            // AQUÍ ESTÁ LA CLAVE: Sumamos 'valor_kg' y lo renombramos 'total_kg'
+            \DB::raw('SUM(gen_subproductos.valor_kg) as total_kg')
         )
             ->join('subproductos', 'gen_subproductos.subproducto_id', '=', 'subproductos.id')
+            ->leftJoin('zonas', 'gen_subproductos.zona_id', '=', 'zonas.id')
+            ->where('gen_subproductos.instituto_id', Auth::user()->instituto_id)
             ->whereBetween('gen_subproductos.fecha', [$inicio, $final])
-            ->groupBy('subproductos.id', 'subproductos.nombre', 'gen_subproductos.fecha')
-            ->orderBy('subproductos.id')
-            ->orderBy('gen_subproductos.fecha')
-            ->get();
+            ->groupBy('zonas.nombre', 'subproductos.nombre', 'gen_subproductos.fecha')
+            ->orderBy('zonas.nombre')
+            ->orderBy('subproductos.nombre')
+            ->get(); // <--- El get() es importante para convertirlo en colección
 
-        // Agrupar por subproducto
-        $datosAgrupados = $datosGenerados->groupBy('subproducto_nombre');
+        $datosAgrupados = $datosGenerados->groupBy(['zona_nombre', 'subproducto_nombre']);
 
-        // dd($datosAgrupados);
-
-        return view('gensubproductos.show', compact('datosAgrupados', 'inicio', 'final', 'instituto'));
+        return view('gensubproductos.show', [
+            'datosAgrupados' => $datosAgrupados,
+            'inicio' => $inicio,
+            'final' => $final,
+            'instituto' => Auth::user()->instituto
+        ]);
     }
 
     /**
@@ -227,81 +197,48 @@ class RegistroSubproductoController extends Controller
      */
     public function edit(Request $request, $instituto_id, $inicio, $final)
     {
+        // 1. Parsear fechas
+        $inicioDate = \Carbon\Carbon::parse($inicio);
+        $finalDate = \Carbon\Carbon::parse($final);
 
-        // Convertir las fechas a instancias de Carbon
-        $inicio = Carbon::parse($inicio);
-        $final = Carbon::parse($final)->endOfDay();
-
-        // Mantener el valor original de $inicio intacto para la base de datos
-        $inicioOriginal = $inicio->copy();
-        $inicioSemana = $inicio->dayOfWeek;
-        $inicio = $inicio->subDays($inicioSemana);
-
-        // Verificar si el usuario está autenticado
-        if (Auth::check()) {
-            // Obtener el instituto del usuario autenticado o null si no tiene uno relacionado
-            $instituto = Auth::user()->instituto ?? null;
-        } else {
-            // Redirigir a la página de inicio de sesión si no está autenticado
-            return redirect()->route('login')->with('error', 'Su sesión ha expirado. Por favor, inicie sesión nuevamente.');
+        // 2. Auth Check
+        if (!Auth::check()) {
+            return redirect()->route('login');
         }
+        $instituto = Auth::user()->instituto;
 
-        // Obtener los subproductos disponibles
-        $subproductos = Subproducto::all();
+        // 3. Obtener Catálogos
+        // NECESITAMOS LAS ZONAS para el Wizard
+        $zonas = \App\Models\Zona::where('instituto_id', $instituto->id)->get();
+        $subproductos = \App\Models\Subproducto::all();
 
-        /**  Obtenemos los 7 dias (1 semana en relacion a la primera fecha que el usuario haya seleccionado) 
-         * esto nos sirve para iterar en el formulario respetando el rango de 7 dias
-         */
-        $RangoFechas = collect(range(0, 6))->map(function ($offset) use ($inicio) {
-            return \Carbon\Carbon::parse($inicio)->addDays($offset)->format('Y-m-d');
-        });
+        // 4. Obtener Datos Registrados (CRUDOS)
+        // IMPORTANTE: Traemos el 'zona_id' para saber dónde pintar el dato
+        $datosRegistrados = \App\Models\GenSubproducto::where('instituto_id', $instituto->id)
+            ->whereBetween('fecha', [$inicioDate->startOfDay(), $finalDate->endOfDay()])
+            ->select('zona_id', 'subproducto_id', 'fecha', 'valor_kg') // <--- Seleccionamos zona_id
+            ->get();
 
-        // dd($RangoFechas);
-
-        $datosGenerados = GenSubproducto::select('valor_kg', 'subproducto_id', 'fecha')
-            ->where('instituto_id', $instituto->id)
-            ->whereBetween('fecha', [$inicio, $final])
-            ->get()
-            ->groupBy('subproducto_id')
-            ->mapWithKeys(function ($items, $subproducto_id) use ($RangoFechas) {
-                $valoresPorFecha = $RangoFechas->mapWithKeys(function ($fecha) {
-                    return [$fecha => ''];
-                });
-
-                // Reemplazar los valores del rango de fecha (0 por defecto) por los que se encuentran en valor_kg
-                foreach ($items as $item) {
-                    $fechaSinHora = \Carbon\Carbon::parse($item->fecha)->format('Y-m-d');
-                    if ($valoresPorFecha->has($fechaSinHora)) {
-                        $valoresPorFecha[$fechaSinHora] = $item->valor_kg;
-                    }
-                }
-                return [$subproducto_id => $valoresPorFecha];
-            })->toArray();
-
-        // dd($datosGenerados);
-
-        // Pasar las variables a la vista
+        // Retornamos vista con datos limpios
         return view('gensubproductos.edit', [
             'instituto' => $instituto,
-            'inicio' => $inicioOriginal->format('m-d-Y'),
-            'final' => $final->format('m-d-Y'),    // Formato correcto para las fechas
+            'instituto_id' => $instituto->id,
+            'inicio' => $inicioDate->format('Y-m-d'), // Formato estándar para JS
+            'final' => $finalDate->format('Y-m-d'),
+            'zonas' => $zonas,              // <--- Agregado
             'subproductos' => $subproductos,
-            'datosGenerados' => $datosGenerados,
-            'RangoFechas' => $RangoFechas, // Llamamos al rango de fechas para hacer la iteracion en el formulario
+            'datosRegistrados' => $datosRegistrados // <--- Enviamos la colección plana
         ]);
     }
-
-
-
 
     /**
      * Update the specified resource in storage.
      */
     public function updateMultiple(Request $request)
     {
-        // Validar los datos del formulario recibidos
         $request->validate([
             'instituto_id' => 'required|exists:institutos,id',
+            'zonas_areas_id' => 'nullable|exists:zonas_areas,id', // <--- NUEVO
             'inicio' => 'required|date|before_or_equal:final',
             'final' => 'required|date|after_or_equal:inicio',
             'subproducto' => 'required|array',
@@ -309,82 +246,64 @@ class RegistroSubproductoController extends Controller
         ]);
 
         $instituto_id = $request->input('instituto_id');
+        $zona_id = $request->input('zona_id'); // <--- CAPTURAR ZONA
+
         $inicio = Carbon::createFromFormat('m/d/Y', $request->input('inicio'));
         $final = Carbon::createFromFormat('m/d/Y', $request->input('final'));
 
+        // ... (Lógica de fechas se mantiene igual) ...
         $inicio->copy();
         $inicioSemana = $inicio->dayOfWeek;
         $inicio = $inicio->subDays($inicioSemana);
 
-        // Verificar si la fecha inicio no sea posterior a la fecha final, si no mandar un error de validacion
-        if ($inicio->gt($final)) {
-            return back()->withErrors(['date_error' => 'La fecha de inicio no puede ser posterior a la fecha final.']);
-        }
-
-        // Verificar que el rango de fechas no exceda los 7 días
-        if ($inicio->diffInDays($final) > 6) {
-            return redirect()->back()->withInput()->withErrors(['final' => 'El rango de fechas no puede exceder los 7 días.']);
-        }
-
-        // Iterar sobre el rango de fechas y mapearlas con los días de la semana
+        // ... (Generación del array $dias se mantiene igual) ...
         $dias = [];
         $currentDate = $inicio->copy();
         while ($currentDate->lte($final)) {
-            $dias[] = $currentDate->copy(); // Guardar la fecha actual
-            $currentDate->addDay(); // Avanzar al siguiente día
+            $dias[] = $currentDate->copy();
+            $currentDate->addDay();
         }
 
-        // Validar que ninguna fecha exceda el rango seleccionado
+        // Iterar y actualizar
         foreach ($request->input('subproducto') as $subproducto_id => $subproducto) {
-            foreach ($subproducto['valor_kg'] as $dia => $valor_kg) {
-                if (!is_null($valor_kg)) {
-                    // Calcular la fecha correspondiente al día
-                    $dia_numero = (int) str_replace('dia_', '', $dia);
-                    $fecha = $inicio->copy()->addDays(($dia_numero - 1 + (7 - $inicioSemana)) % 7);
-                    if ($fecha->greaterThan($final)) {
-                        return redirect()->back()->withInput()->withErrors(['No puedes capturar datos fuera del rango de fecha seleccionado.']);
-                    }
-                }
-            }
-        }
-
-        // Iterar sobre cada subproducto y actualizar sus registros
-        foreach ($request->input('subproducto') as $subproducto_id => $subproducto) {
-            $nombre = $subproducto['nombre'];
             $valoresKg = $subproducto['valor_kg'];
 
-            // Iterar sobre los días de la semana y actualizar los registros correspondientes
             foreach ($dias as $index => $fecha) {
-                // Obtener el día correspondiente de los valores enviados
                 $diaKey = 'dia_' . ($index + 1);
                 $valorKg = $valoresKg[$diaKey] ?? null;
-
                 $fechaCalculada = $fecha;
 
-                // Buscamos los registros existentes
-                $registroExistente = GenSubproducto::where('instituto_id', $instituto_id)
+                // BÚSQUEDA DEL REGISTRO EXISTENTE
+                // Aquí agregamos el filtro de zona para no editar el registro de otra área por error
+                $query = GenSubproducto::where('instituto_id', $instituto_id)
                     ->where('subproducto_id', $subproducto_id)
-                    ->whereDate('fecha', $fechaCalculada->toDateString())
-                    ->first();
+                    ->whereDate('fecha', $fechaCalculada->toDateString());
+
+                if ($zona_id) {
+                    $query->where('zona_id', $zona_id); // Solo busca en esa zona
+                } else {
+                    $query->whereNull('zona_id'); // Busca los que no tienen zona
+                }
+
+                $registroExistente = $query->first(); // Ejecutamos la búsqueda
 
                 if ($registroExistente) {
                     if (is_null($valorKg) || $valorKg === '') {
-                        // Eliminar el registro si el valor es null o vacío
                         $registroExistente->delete();
                     } else {
-                        // Actualizar el registro existente
                         $registroExistente->update([
                             'valor_kg' => $valorKg,
+                            // No hace falta actualizar zona o instituto, ya coinciden
                         ]);
                     }
                 } else {
                     if (!is_null($valorKg) && $valorKg !== '') {
-                        // Crear un nuevo registro si el valor no es null o vacío
                         GenSubproducto::create([
                             'fecha' => $fecha->toDateString(),
                             'valor_kg' => $valorKg,
                             'instituto_id' => $instituto_id,
                             'subproducto_id' => $subproducto_id,
+                            'zona_id' => $zona_id, // <--- Importante poner la zona al crear
                         ]);
                     }
                 }
@@ -405,120 +324,176 @@ class RegistroSubproductoController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Request $request)
+    public function destroyWeekSubproductos($fechaInicio)
     {
-        //
+        try {
+            $institutoId = auth()->user()->instituto_id;
+
+            // Parsear fecha y calcular fin de semana
+            $startOfWeek = Carbon::parse($fechaInicio)->startOfWeek();
+            $endOfWeek = Carbon::parse($fechaInicio)->endOfWeek();
+
+            // Eliminar directamente usando el rango de fechas e instituto
+            $borrados = GenSubproducto::where('instituto_id', $institutoId)
+                ->whereBetween('fecha', [$startOfWeek->format('Y-m-d'), $endOfWeek->format('Y-m-d')])
+                ->delete();
+
+            if ($borrados > 0) {
+                return redirect()->route('gensubproducto.index')->with('swal', [
+                    'icon' => 'success',
+                    'title' => 'Eliminado',
+                    'text' => 'La semana de subproductos ha sido eliminada correctamente.'
+                ]);
+            } else {
+                return redirect()->route('gensubproducto.index')->with('swal', [
+                    'icon' => 'info',
+                    'title' => 'Info',
+                    'text' => 'No se encontraron registros para eliminar en esa semana.'
+                ]);
+            }
+        } catch (\Exception $e) {
+            return redirect()->route('gensubproducto.index')->with('swal', [
+                'icon' => 'error',
+                'title' => 'Error',
+                'text' => 'No se pudo eliminar la semana: ' . $e->getMessage()
+            ]);
+        }
     }
 
     public function search(Request $request)
     {
-        $query = $request->input('query');
+        $busqueda = $request->input('query');
+        $tiempo = $request->input('tiempo', 'semanal');
+        $institutoId = auth()->user()->instituto_id;
 
-        $registros = DB::table('zonas_areas')
-            ->join('gen_semanals', 'zonas_areas.id', '=', 'gen_semanals.zonas_areas_id')
-            ->join('zonas', 'zonas_areas.zona_id', '=', 'zonas.id')
-            ->join('areas', 'zonas_areas.area_id', '=', 'areas.id')
-            ->select(
-                'zonas.id as zona_id',
-                'zonas.nombre as zona',
-                'areas.id as area_id',
-                'areas.nombre as areaAsignada',
-                'gen_semanals.fecha',
-                'gen_semanals.turno',
-                'gen_semanals.valor_kg'
-            )
-            ->where(function ($q) use ($query) {
-                $q->where('zonas.nombre', 'LIKE', "%{$query}%")
-                    ->orWhere('areas.nombre', 'LIKE', "%{$query}%")
-                    ->orWhere('gen_semanals.fecha', 'LIKE', "%{$query}%")
-                    ->orWhere('gen_semanals.turno', 'LIKE', "%{$query}%");
-            })
-            ->orderBy('gen_semanals.fecha', 'ASC')
-            ->paginate(10) // Esto asegura que sea un Paginator
-            ->appends(['query' => $query]); // Mantén el parámetro `query` en la paginación
-
-        if ($request->ajax()) {
-            // Devuelve solo la parte de la tabla si es una solicitud AJAX
-            return view('gensemanal.partials.table', compact('registros'))->render();
+        if (empty($busqueda)) {
+            return redirect()->route('gensubproducto.index');
         }
 
-        // Devuelve la vista completa si no es AJAX
-        return view('gensemanal.index', compact('registros'));
+        // CORRECCIÓN: Usar GenSubproducto, no GenSemanal
+        $query = GenSubproducto::query()->where('instituto_id', $institutoId);
+
+        // Filtramos por nombre del subproducto
+        $query->whereHas('subproducto', function ($q) use ($busqueda) {
+            $q->where('nombre', 'LIKE', "%{$busqueda}%");
+        });
+
+        // Agrupación (Igual que tu index)
+        if ($tiempo === 'mensual') {
+            $registros = $query->selectRaw(
+                'YEAR(fecha) as year, MONTH(fecha) as mes, MIN(fecha) as fecha_inicio, MAX(fecha) as fecha_final, SUM(valor_kg) as total_kg, instituto_id'
+            )
+                ->groupBy('year', 'mes', 'instituto_id')
+                ->orderBy('year', 'desc')->orderBy('mes', 'desc')
+                ->get();
+        } else {
+            $registros = $query->selectRaw(
+                'YEAR(fecha) as year, WEEK(fecha, 1) as semana, MIN(fecha) as fecha_inicio, MAX(fecha) as fecha_final, SUM(valor_kg) as total_kg, instituto_id'
+            )
+                ->groupBy('year', 'semana', 'instituto_id')
+                ->orderBy('year', 'desc')->orderBy('semana', 'desc')
+                ->get();
+        }
+
+        if ($request->ajax()) {
+            $viewName = ($tiempo === 'mensual')
+                ? 'gensubproductos.partials.table_mensual'
+                : 'gensubproductos.partials.table_semanal';
+            return view($viewName, compact('registros'))->render();
+        }
+
+        return view('gensubproductos.index', compact('registros', 'tiempo'));
     }
 
     public function GenerarPDF(Request $request, $instituto_id, $inicio, $final)
     {
-
-        $inicio = Carbon::parse($inicio);
-        $final = Carbon::parse($final);
-
-        // Verificar si el usuario está autenticado
-        if (Auth::check()) {
-            // Obtener el instituto del usuario autenticado o null si no tiene uno relacionado
-            $instituto = Auth::user()->instituto ?? null;
-        } else {
-            // Redirigir a la página de inicio de sesión si no está autenticado
-            return redirect()->route('login')->with('error', 'Su sesión ha expirado. Por favor, inicie sesión nuevamente.');
+        // 1. Validar sesión
+        if (!Auth::check()) {
+            return redirect()->route('login');
         }
+        $user = Auth::user();
 
-        // Consulta de datos generados
-        $datosGenerados = GenSubproducto::select(
-            'subproductos.id as subproducto_id',
+        // 2. CORRECCIÓN DE FECHAS: Usamos startOfDay y endOfDay
+        // Esto asegura que si filtras hasta "hoy", incluya todo lo de hoy.
+        $inicio = \Carbon\Carbon::parse($inicio)->startOfDay();
+        $final = \Carbon\Carbon::parse($final)->endOfDay();
+
+        // 3. Consulta con LeftJoin y GroupBy ZONA (Igual que en el show)
+        $datosGenerados = \App\Models\GenSubproducto::select(
+            \DB::raw('COALESCE(zonas.nombre, "Sin Zona Asignada") as zona_nombre'),
             'subproductos.nombre as subproducto_nombre',
             'gen_subproductos.fecha',
-            DB::raw('SUM(gen_subproductos.valor_kg) as total_kg')
+            // Obtenemos el valor real para sumar
+            'gen_subproductos.valor_kg'
         )
             ->join('subproductos', 'gen_subproductos.subproducto_id', '=', 'subproductos.id')
+            ->leftJoin('zonas', 'gen_subproductos.zona_id', '=', 'zonas.id')
+            ->where('gen_subproductos.instituto_id', $user->instituto_id)
             ->whereBetween('gen_subproductos.fecha', [$inicio, $final])
-            ->groupBy('subproductos.id', 'subproductos.nombre', 'gen_subproductos.fecha')
-            ->orderBy('subproductos.id')
+
+            // Ordenamos para mantener el orden visual
+            ->orderBy('zonas.nombre')
+            ->orderBy('subproductos.nombre')
             ->orderBy('gen_subproductos.fecha')
             ->get();
 
-        // Agrupar por subproducto
-        $datosAgrupados = $datosGenerados->groupBy('subproducto_nombre');
+        // 4. AGRUPACIÓN DOBLE: Zona -> Subproducto
+        // Esto es crucial para que el bucle @foreach de tu PDF funcione
+        $datosAgrupados = $datosGenerados->groupBy(['zona_nombre', 'subproducto_nombre']);
 
-        // $imagePath = public_path('src/images/itsvalogo.png');
-        // $image = "data:image/png;base64," . base64_encode(file_get_contents($imagePath));
+        // NOTA: Para los totales dentro del grupo, calculamos la suma en la vista o mapeamos aquí
+        // Para simplificar, enviaremos la colección tal cual y dejaremos que la vista sume.
 
-        $pdf = Pdf::loadView('gensubproductos.pdf', compact('datosAgrupados', 'inicio', 'final', 'instituto'));
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('gensubproductos.pdf', [
+            'datosAgrupados' => $datosAgrupados,
+            'inicio' => $inicio,
+            'final' => $final,
+            'instituto' => $user->instituto
+        ]);
+
         return $pdf->stream('reporte_subproductos.pdf');
     }
 
 
     public function GenerarExcel(Request $request, $instituto_id, $inicio, $final)
     {
+        $inicio = \Carbon\Carbon::parse($inicio)->startOfDay();
+        $final = \Carbon\Carbon::parse($final)->endOfDay();
 
-        $inicio = Carbon::parse($inicio);
-        $final = Carbon::parse($final);
-
-        // Verificar si el usuario está autenticado
-        if (Auth::check()) {
-            // Obtener el instituto del usuario autenticado o null si no tiene uno relacionado
-            $instituto = Auth::user()->instituto ?? null;
-        } else {
-            // Redirigir a la página de inicio de sesión si no está autenticado
-            return redirect()->route('login')->with('error', 'Su sesión ha expirado. Por favor, inicie sesión nuevamente.');
+        // 1. Verificar sesión
+        if (!Auth::check()) {
+            return redirect()->route('login');
         }
+        $user = Auth::user();
 
-        // Consulta de datos generados
-        $datosGenerados = GenSubproducto::select(
-            'subproductos.id as subproducto_id',
+        // (Opcional) Validar que el usuario pertenezca al instituto
+        // if ($user->instituto_id != $instituto_id) abort(403);
+
+        // 2. Consulta corregida (Igual que en el PDF)
+        $datosGenerados = \App\Models\GenSubproducto::select(
+            // Agregamos la columna de ZONA
+            \DB::raw('COALESCE(zonas.nombre, "Sin Zona Asignada") as zona_nombre'),
             'subproductos.nombre as subproducto_nombre',
             'gen_subproductos.fecha',
-            DB::raw('SUM(gen_subproductos.valor_kg) as total_kg')
+            // Sumamos los kilos agrupados
+            \DB::raw('SUM(gen_subproductos.valor_kg) as total_kg')
         )
             ->join('subproductos', 'gen_subproductos.subproducto_id', '=', 'subproductos.id')
+            // Usamos LeftJoin para incluir registros viejos sin zona
+            ->leftJoin('zonas', 'gen_subproductos.zona_id', '=', 'zonas.id')
+
+            // Filtramos por el instituto del usuario para seguridad
+            ->where('gen_subproductos.instituto_id', $user->instituto_id)
             ->whereBetween('gen_subproductos.fecha', [$inicio, $final])
-            ->groupBy('subproductos.id', 'subproductos.nombre', 'gen_subproductos.fecha')
-            ->orderBy('subproductos.id')
+
+            // Agrupamos incluyendo la Zona
+            ->groupBy('zonas.nombre', 'subproductos.id', 'subproductos.nombre', 'gen_subproductos.fecha')
+
+            // Ordenamos
+            ->orderBy('zonas.nombre')
+            ->orderBy('subproductos.nombre')
             ->orderBy('gen_subproductos.fecha')
             ->get();
-
-        // dd($datosGenerados);
-
-        // $imagePath = public_path('src/images/itsvalogo.png');
-        // $image = "data:image/png;base64," . base64_encode(file_get_contents($imagePath));
 
         return Excel::download(new RegistroSubproductosExport($datosGenerados, $inicio, $final), 'registro-subproductos.xlsx');
     }

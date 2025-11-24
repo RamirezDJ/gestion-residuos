@@ -38,7 +38,9 @@ Route::middleware([
     Route::get('/graficassemanal/data/barchart', [GraficasSemanalController::class, 'getGraficoTotalResiduos'])->name('graficassemanal.data.barchart')->middleware(['can:Acceso a Graficas']);
     Route::get('/graficassemanal/data/linechart', [GraficasSemanalController::class, 'getGraficoTendenciaResiduos'])->name('graficassemanal.data.linechart')->middleware(['can:Acceso a Graficas']);
 
+    Route::get('/gensubproductos/search', [RegistroSubproductoController::class, 'search'])->name('gensubproductos.search')->middleware(['can:Acceso a Inicio']);
     Route::resource('/gensubproductos', RegistroSubproductoController::class)->middleware(['can:Acceso a Inicio']);
+    Route::delete('/gensubproductos/destroy-week/{fecha}', [RegistroSubproductoController::class, 'destroyWeekSubproductos'])->name('gensubproductos.destroyWeek')->middleware(['can:Acceso a Inicio']);
     Route::get('/gensubproductos/edit/{instituto_id}/{inicio}/{final}', [RegistroSubproductoController::class, 'edit'])->name('gensubproductos.editAll')->middleware(['can:Acceso a Inicio']);
     Route::get('/gensubproductos/show/{instituto_id}/{inicio}/{final}', [RegistroSubproductoController::class, 'show'])->name('gensubproductos.showAll')->middleware(['can:Acceso a Inicio']);
     Route::put('/gensubproductos', [RegistroSubproductoController::class, 'updateMultiple'])->name('gensubproductos.updateMultiple');

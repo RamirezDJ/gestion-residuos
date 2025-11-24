@@ -14,6 +14,8 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Collection;
+use stdClass;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
 class RegistroSemanalController extends Controller
@@ -136,6 +138,14 @@ class RegistroSemanalController extends Controller
         $data = $request->input('valor_kg', []);
         $turno = $request->input('turno');
 
+        $zonasAreasMap = ZonasAreas::whereHas('zona', function ($q) use ($institutoId) {
+            $q->where('instituto_id', $institutoId);
+        })
+            ->get()
+            ->mapWithKeys(function ($item) {
+                return [$item->zona_id . '-' . $item->area_id => $item->id];
+            });
+
         $datosInsertar = []; // Array para guardar todo de golpe al final
 
         // 2. LÓGICA DE BUCLES
@@ -148,39 +158,27 @@ class RegistroSemanalController extends Controller
             // Nivel 2: Iterar por ZONA
             foreach ($zonas as $zonaId => $areas) {
 
-                // Nivel 3: Iterar por ÁREA
                 foreach ($areas as $areaId => $inputs) {
 
-                    // Buscamos la relación zona-área (necesaria para el ID)
-                    $zonaArea = ZonasAreas::where('zona_id', $zonaId)
-                        ->where('area_id', $areaId)
-                        ->first();
+                    $zonaAreaId = $zonasAreasMap[$zonaId . '-' . $areaId] ?? null;
 
-                    // Si no existe la relación Zona-Area, saltamos para evitar errores
-                    if (!$zonaArea) continue;
 
-                    // Nivel 4: Iterar por INPUTS (Categorías y kilos)
+                    if (!$zonaAreaId) continue;
+
                     foreach ($inputs as $key => $kilos) {
 
-                        // A. Validamos que sea numérico y mayor a 0
                         if (empty($kilos) || !is_numeric($kilos) || $kilos <= 0) {
                             continue;
                         }
 
-                        // B. Extraemos el ID de la categoría
-                        // Si tus inputs se llaman "cat_1", "cat_2", etc.
                         if (str_starts_with($key, 'cat_')) {
                             $categoriaId = (int) str_replace('cat_', '', $key);
 
-                            // PREPARAMOS EL DATO PARA INSERTAR (USANDO categoria_id)
                             $datosInsertar[] = [
                                 'fecha'          => $fechaDelRegistro,
                                 'turno'          => $turno,
-                                'zonas_areas_id' => $zonaArea->id,
-
-                                // AQUÍ ESTÁ LA CLAVE: Usamos la columna nueva
+                                'zonas_areas_id' => $zonaAreaId, 
                                 'categoria_id'   => $categoriaId,
-
                                 'kilos'          => $kilos,
                                 'created_at'     => now(),
                                 'updated_at'     => now(),
@@ -191,7 +189,6 @@ class RegistroSemanalController extends Controller
             }
         }
 
-        // 3. GUARDADO FINAL MASIVO
         if (count($datosInsertar) > 0) {
             GenSemanal::insert($datosInsertar);
 
@@ -718,52 +715,111 @@ class RegistroSemanalController extends Controller
         if (!auth()->check()) {
             return redirect('/');
         }
-
         $instituto = auth()->user()->instituto;
         if (!$instituto) {
             return redirect()->back();
         }
 
-        // 1. Calcular la semana completa
-        $fechaCarbon = Carbon::createFromFormat('Y-m-d', $fecha);
-        $fechaInicioSemana = $fechaCarbon->startOfWeek(Carbon::MONDAY)->format('Y-m-d');
-        $fechaFinSemana = $fechaCarbon->endOfWeek(Carbon::SUNDAY)->format('Y-m-d');
+        // 1. CALCULAR LA SEMANA
+        // Usamos startOfDay para evitar problemas de horas
+        $fechaCarbon = Carbon::createFromFormat('Y-m-d', $fecha)->startOfDay();
+        $fechaInicioSemana = $fechaCarbon->copy()->startOfWeek(Carbon::MONDAY)->format('Y-m-d');
+        $fechaFinSemana = $fechaCarbon->copy()->endOfWeek(Carbon::SUNDAY)->format('Y-m-d');
 
-        // 2. OBTENER LOS DATOS
-        $registrosDetallados = GenSemanal::whereBetween('fecha', [$fechaInicioSemana, $fechaFinSemana])
-            ->join('zonas_areas', 'gen_semanals.zonas_areas_id', '=', 'zonas_areas.id')
-            ->join('zonas', 'zonas_areas.zona_id', '=', 'zonas.id')
-            ->join('areas', 'zonas_areas.area_id', '=', 'areas.id')
-            // JOIN CORRECTO:
-            ->join('categorias', 'gen_semanals.categoria_id', '=', 'categorias.id')
-
-            // CORRECCIÓN DE VARIABLE AQUÍ:
-            ->where('zonas.instituto_id', $instituto->id)
-
-            ->select(
-                'gen_semanals.categoria_id as subproducto_id',
-                'categorias.nombre as subproducto_nombre',
-                'gen_semanals.fecha',
-                'gen_semanals.turno',
-                'zonas.nombre as zona_nombre',
-                'areas.nombre as area_nombre',
-                'gen_semanals.kilos'
-            )
-            ->orderBy('gen_semanals.fecha')
-            ->orderBy('zonas.nombre')
-            ->orderBy('areas.nombre')
+        // 2. OBTENER ESTRUCTURA (Zonas -> Áreas -> Categorías)
+        // Mantenemos 'subproductos' para filtrar categorías por área correctamente
+        $zonas = Zona::where('instituto_id', $instituto->id)
+            ->orderBy('nombre')
+            ->with(['areas.subproductos' => function ($query) {
+                $query->orderBy('subproductos.nombre');
+            }])
             ->get();
 
-        // 3. Formatear y Descargar
-        $fechaInicioFormateada = Carbon::parse($fechaInicioSemana)->format('d-m-Y');
-        $fechaFinFormateada = Carbon::parse($fechaFinSemana)->format('d-m-Y');
+        // 3. OBTENER DATOS CAPTURADOS
+        $datosDB = GenSemanal::whereBetween('fecha', [$fechaInicioSemana, $fechaFinSemana])
+            ->join('zonas_areas', 'gen_semanals.zonas_areas_id', '=', 'zonas_areas.id')
+            ->join('zonas', 'zonas_areas.zona_id', '=', 'zonas.id')
+            ->where('zonas.instituto_id', $instituto->id)
+            ->select(
+                'gen_semanals.fecha',
+                'gen_semanals.turno',
+                'gen_semanals.kilos',
+                'zonas_areas.area_id',
+                'gen_semanals.categoria_id'
+            )
+            ->get();
+
+        // --- LÓGICA DE TURNO PREDETERMINADO ---
+        // Buscamos si existe algún registro capturado para usar su turno como default
+        $primerRegistro = $datosDB->first();
+        $turnoDefault = $primerRegistro ? $primerRegistro->turno : 'Matutino';
+
+        // 4. MAPEAR DATOS PARA BÚSQUEDA RÁPIDA
+        // Diccionario: [FECHA][AREA][CATEGORIA] = Registro
+        $lookup = [];
+        foreach ($datosDB as $d) {
+            $lookup[$d->fecha][$d->area_id][$d->categoria_id] = $d;
+        }
+
+        // 5. CONSTRUIR LA LISTA COMPLETA (Incluyendo Ceros)
+        $listaCompleta = new Collection();
+
+        $fechaIter = Carbon::parse($fechaInicioSemana)->startOfDay();
+        $fechaFin = Carbon::parse($fechaFinSemana)->endOfDay();
+
+        // Bucle 1: Días (Lunes a Domingo)
+        while ($fechaIter->lte($fechaFin)) {
+            $fechaStr = $fechaIter->format('Y-m-d');
+
+            // Bucle 2: Zonas
+            foreach ($zonas as $zona) {
+                // Bucle 3: Áreas
+                foreach ($zona->areas as $area) {
+
+                    // Obtenemos categorías únicas del área (Filtrado inteligente)
+                    $categoriasDelArea = $area->subproductos
+                        ->pluck('categoria')
+                        ->unique('id')
+                        ->sortBy('nombre');
+
+                    // Bucle 4: Categorías
+                    foreach ($categoriasDelArea as $categoria) {
+                        if ($categoria) {
+                            // Buscamos si existe el dato real en la BD
+                            $registroReal = $lookup[$fechaStr][$area->id][$categoria->id] ?? null;
+
+                            // Creamos un OBJETO (stdClass) que imita a un registro de BD
+                            // Así tu archivo Export no nota la diferencia
+                            $fila = new stdClass();
+
+                            $fila->fecha = $fechaStr; // Formato Y-m-d (Tu export lo formatea después)
+
+                            // TURNO: Si existe registro usamos su turno, si no, el default
+                            $fila->turno = $registroReal ? $registroReal->turno : $turnoDefault;
+
+                            // DATOS DESCRIPTIVOS
+                            $fila->zona_nombre = $zona->nombre;
+                            $fila->area_nombre = $area->nombre;
+                            $fila->subproducto_nombre = $categoria->nombre; // Usamos nombre de categoría
+
+                            // KILOS: Si existe usamos el valor, si no, 0
+                            $fila->kilos = $registroReal ? $registroReal->kilos : 0;
+
+                            // Agregamos a la lista final
+                            $listaCompleta->push($fila);
+                        }
+                    }
+                }
+            }
+            $fechaIter->addDay();
+        }
+
+        // 6. EXPORTAR
+        // Preparamos el título y nombre del archivo
         $tituloFecha = Carbon::parse($fechaInicioSemana)->format('d/m/Y') . ' al ' . Carbon::parse($fechaFinSemana)->format('d/m/Y');
+        $nombreArchivo = 'Reporte_Semanal_' . $instituto->nombre_corto . '_' . $fechaInicioSemana . '.xlsx';
 
-        $fileName = 'Reporte_Semanal_' . $instituto->nombre_corto . '_' . $fechaInicioFormateada . '_al_' . $fechaFinFormateada . '.xlsx';
-
-        return Excel::download(
-            new RegistroSemanalExport($registrosDetallados, $tituloFecha),
-            $fileName
-        );
+        // Enviamos la lista "inflada" a tu exportador original
+        return Excel::download(new RegistroSemanalExport($listaCompleta, $tituloFecha), $nombreArchivo);
     }
 }

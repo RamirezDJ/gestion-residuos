@@ -2,67 +2,49 @@
 <html lang="es">
 
 <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     <title>Gestión de Residuos - Reporte</title>
 
     <style>
-        /* Configuración de la página */
+        /* --- ESTILOS DEL TEMPLATE --- */
         @page {
             margin: 1cm;
-            /* Márgenes generales */
         }
 
-        /* Estilo general del cuerpo */
         body {
             font-family: 'Helvetica', 'Arial', sans-serif;
-            font-size: 10pt;
+            font-size: 9pt;
             line-height: 1.4;
             color: #333;
             margin: 0;
             padding: 0;
-            text-align: justify;
         }
 
-        /* Contenedor principal */
         .container {
             width: 100%;
-            text-align: center;
             box-sizing: border-box;
             max-width: 100%;
-            /* Asegura que no se desborde */
         }
 
-        /* Estilo de la cabecera */
+        /* Cabecera idéntica al template */
         .header {
             background-color: #611232;
             color: white;
             padding: 15pt;
             margin: -1cm -1cm 10pt -1cm;
-            /* Ajuste de márgenes para que no se desborde */
             text-align: center;
         }
 
-        .logo {
-            width: 60pt;
-            height: auto;
-            margin-bottom: 5pt;
-        }
-
         .title {
-            font-size: 18pt;
+            font-size: 16pt;
             font-weight: bold;
             margin: 0;
             text-transform: uppercase;
-            letter-spacing: 1pt;
             color: white;
         }
 
-        /* Sección de contenido */
         .section {
             margin-bottom: 20pt;
-            border-radius: 8pt;
-            padding: 15pt;
-            box-shadow: 0 3pt 5pt rgba(0, 0, 0, 0.1);
         }
 
         .section-title {
@@ -74,38 +56,35 @@
             padding-bottom: 5pt;
         }
 
-        /* Tablas de datos */
-        .data-grid,
-        .subproduct-table {
+        /* Tablas unificadas con el estilo del template */
+        .summary-table,
+        .data-table {
             width: 100%;
             border-collapse: collapse;
             margin-bottom: 15pt;
             font-size: 9pt;
-        }
-
-        .data-grid th,
-        .data-grid td,
-        .subproduct-table th,
-        .subproduct-table td {
-            padding: 8pt;
-            text-align: left;
             border: 0.5pt solid #ddd;
         }
 
-        .data-grid tr:nth-child(even),
-        .subproduct-table tr:nth-child(even) {
+        .summary-table td,
+        .data-table td,
+        .data-table th {
+            border: 0.5pt solid #ddd;
+            padding: 6pt;
+            text-align: left;
+        }
+
+        /* Filas alternadas (gris claro) */
+        .summary-table tr:nth-child(even),
+        .data-table tr:nth-child(even) {
             background-color: #f2f2f2;
         }
 
         .data-label {
             font-weight: bold;
-        }
-
-        .subproduct-table th {
-            background-color: #611232;
-            color: white;
-            font-weight: bold;
-            text-transform: uppercase;
+            width: 40%;
+            background-color: #f8f9fa;
+            /* Un gris muy suave para las etiquetas */
         }
 
         .highlight {
@@ -113,9 +92,34 @@
             color: #cc0303;
         }
 
-        /* Estilo para el pie de página */
+        /* Cabeceras de tabla estilo Institucional */
+        .data-table th.main-header {
+            background-color: #611232;
+            color: white;
+            font-weight: bold;
+            text-transform: uppercase;
+            text-align: center;
+        }
+
+        /* Estilo visual para separar las ZONAS (Similar a .zona-header del template) */
+        .zona-block-title {
+            background-color: #e9ecef;
+            color: #1a202c;
+            font-size: 11pt;
+            font-weight: bold;
+            padding: 8pt;
+            border-left: 5pt solid #611232;
+            margin-bottom: 10pt;
+            margin-top: 15pt;
+        }
+
+        /* Pie de página fijo */
         .footer {
-            position: running(footer);
+            position: fixed;
+            bottom: -0.5cm;
+            left: 0cm;
+            right: 0cm;
+            height: 1cm;
             width: 100%;
             text-align: center;
             font-size: 8pt;
@@ -124,51 +128,42 @@
             padding-top: 5pt;
         }
 
-        @page {
-            @bottom-center {
-                content: element(footer);
-            }
-        }
-
-        /* Saltos de página */
         .page-break {
             page-break-after: always;
         }
-
-        /* Asegura que el contenido de las tablas no se desborde */
-        .subproduct-table td,
-        .subproduct-table th {
-            max-width: 150px;
-            /* Ajustar el ancho máximo de las celdas */
-            word-wrap: break-word;
-        }
     </style>
-
 </head>
 
 <body>
+    {{-- PIE DE PÁGINA (Estilo Template) --}}
+    <div class="footer">
+        <p>Fecha de descarga: {{ now()->format('d/m/Y H:i:s') }}</p>
+        <p>{{ $instituto->nombre }} - Reporte de Gestión de Residuos</p>
+    </div>
+
     <div class="container">
+        {{-- CABECERA (Estilo Template) --}}
         <div class="header">
-            {{-- <img class="logo" src="{{ $image }}" alt="itsvalogo"> --}}
             <h1 class="title">Gestión de residuos sólidos institucionales</h1>
         </div>
 
+        {{-- SECCIÓN 1: RESUMEN --}}
         <div class="section">
             <h2 class="section-title">Resumen de Datos Generados</h2>
-            <table class="data-grid">
+            <table class="summary-table">
                 <tr>
-                    <td class="data-label">Fecha inicio:</td>
-                    <td>{{ $inicio->format('d/m/Y') }}</td>
+                    <td class="data-label">Instituto:</td>
+                    <td>{{ $instituto->nombre }}</td>
                 </tr>
                 <tr>
-                    <td class="data-label">Fecha final:</td>
-                    <td>{{ $final->format('d/m/Y') }}</td>
+                    <td class="data-label">Rango de fechas:</td>
+                    <td>{{ $inicio->format('d/m/Y') }} al {{ $final->format('d/m/Y') }}</td>
                 </tr>
                 <tr>
                     <td class="data-label">Total generado de subproductos:</td>
                     <td class="highlight">
                         @php
-                            $totalGenerado = $datosAgrupados->flatten()->sum('total_kg');
+                            $totalGenerado = $datosAgrupados->flatten(2)->sum('valor_kg');
                         @endphp
                         {{ number_format($totalGenerado, 2) }} kg
                     </td>
@@ -177,83 +172,105 @@
                     <td class="data-label">Subproducto con mayor generación:</td>
                     <td class="highlight">
                         @php
-                            $subproductoMayor = $datosAgrupados->flatten()->sortByDesc('total_kg')->first();
+                            $subproductoMayor = $datosAgrupados
+                                ->flatten(2)
+                                ->groupBy('subproducto_nombre')
+                                ->map(function ($rows, $nombre) {
+                                    return [
+                                        'nombre' => $nombre,
+                                        'total' => $rows->sum('total_kg'),
+                                    ];
+                                })
+                                ->sortByDesc('total')
+                                ->first();
                         @endphp
-                        {{ $subproductoMayor ? $subproductoMayor->subproducto_nombre : 'No disponible' }}
+                        {{ $subproductoMayor ? $subproductoMayor['nombre'] : 'No disponible' }}
                     </td>
-                </tr>
-                <tr>
-                    <td class="data-label">Instituto:</td>
-                    <td>{{ $instituto->nombre }}</td>
                 </tr>
             </table>
         </div>
 
+        {{-- Salto de página antes del desglose --}}
         <div class="page-break"></div>
 
+        {{-- SECCIÓN 2: DESGLOSE --}}
         <div class="section">
-            <h2 class="section-title">Desglose de Datos por Subproducto</h2>
-            @foreach ($datosAgrupados as $subproducto => $datos)
-                <table class="subproduct-table">
-                    <thead>
-                        <tr>
-                            <th colspan="7">{{ $subproducto }}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <!-- Fila de Fechas -->
-                        @php
-                            $fechaChunks = array_chunk($datos->pluck('fecha')->toArray(), 6);
-                            $cantidadChunks = array_chunk($datos->pluck('total_kg')->toArray(), 6);
-                        @endphp
-                        @foreach ($fechaChunks as $index => $fechaChunk)
+            <h2 class="section-title">Desglose de Datos por Zona y Subproducto</h2>
+
+            @foreach ($datosAgrupados as $zonaNombre => $subproductos)
+                {{-- Título de ZONA --}}
+                <div class="zona-block-title">
+                    Zona: {{ $zonaNombre }}
+                </div>
+
+                {{-- Bucle de Subproductos de esa zona --}}
+                @foreach ($subproductos as $subproductoNombre => $datos)
+                    <table class="data-table">
+                        <thead>
                             <tr>
-                                <td class="data-label">Fecha:</td>
-                                @foreach ($fechaChunk as $fecha)
-                                    <td class="py-3 px-4 text-left">
-                                        {{ \Carbon\Carbon::parse($fecha)->format('d/m/Y') }}
-                                    </td>
-                                @endforeach
-                                <!-- Rellenar celdas vacías si la fila tiene menos de 6 columnas -->
-                                @foreach (array_pad($fechaChunk, 6, '') as $fecha)
-                                    @if ($fecha === '')
-                                        <td class="py-3 px-4 text-left"></td>
-                                    @endif
-                                @endforeach
+                                <th colspan="7" class="main-header">{{ $subproductoNombre }}</th>
                             </tr>
-                            <tr>
-                                <td class="data-label">Cantidad Generada:</td>
-                                @foreach ($cantidadChunks[$index] as $cantidad)
-                                    <td class="py-3 px-4 text-left">{{ $cantidad }}</td>
-                                @endforeach
-                                <!-- Rellenar celdas vacías si la fila tiene menos de 6 columnas -->
-                                @foreach (array_pad($cantidadChunks[$index], 6, '') as $cantidad)
-                                    @if ($cantidad === '')
-                                        <td class="py-3 px-4 text-left"></td>
-                                    @endif
-                                @endforeach
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            @php
+                                $fechaChunks = array_chunk($datos->pluck('fecha')->toArray(), 6);
+                                $cantidadChunks = array_chunk($datos->pluck('valor_kg')->toArray(), 6);
+                            @endphp
+
+                            @foreach ($fechaChunks as $index => $fechaChunk)
+                                <tr>
+                                    <td class="data-label" style="width: 15%;">Fecha:</td>
+                                    @foreach ($fechaChunk as $fecha)
+                                        <td style="text-align: center;">
+                                            {{ \Carbon\Carbon::parse($fecha)->format('d/m/Y') }}
+                                        </td>
+                                    @endforeach
+                                    {{-- Rellenar vacíos --}}
+                                    @foreach (array_pad($fechaChunk, 6, '') as $fecha)
+                                        @if ($fecha === '')
+                                            <td>&nbsp;</td>
+                                        @endif
+                                    @endforeach
+                                </tr>
+                                <tr>
+                                    <td class="data-label">Cantidad:</td>
+                                    @foreach ($cantidadChunks[$index] as $cantidad)
+                                        <td style="text-align: center;">{{ $cantidad }}</td>
+                                    @endforeach
+                                    {{-- Rellenar vacíos --}}
+                                    @foreach (array_pad($cantidadChunks[$index], 6, '') as $cantidad)
+                                        @if ($cantidad === '')
+                                            <td>&nbsp;</td>
+                                        @endif
+                                    @endforeach
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+
+                    {{-- Espacio entre tablas (opcional) --}}
+                    <div style="margin-bottom: 15pt;"></div>
+                @endforeach
+
+                {{-- LÓGICA DE SALTO DE PÁGINA POR ZONA --}}
+                {{-- "Si NO es la última zona, haz un salto de página" --}}
+                @if (!$loop->last)
+                    <div class="page-break"></div>
+                @endif
             @endforeach
         </div>
     </div>
 
-    <div class="footer">
-        <p>Fecha de descarga: {{ now()->format('d/m/Y H:i:s') }} | Página <span class="pagenum"></span></p>
-        <p>{{ $instituto->nombre }} - Reporte de Gestión de Residuos</p>
-    </div>
-
+    {{-- Script de numeración de páginas (opcional, si el footer fijo no es suficiente) --}}
     <script type="text/php">
         if (isset($pdf)) {
             $text = "Página {PAGE_NUM} de {PAGE_COUNT}";
-            $size = 10;
+            $size = 9;
             $font = $fontMetrics->getFont("Helvetica");
             $width = $fontMetrics->get_text_width($text, $font, $size) / 2;
             $x = ($pdf->get_width() - $width) / 2;
-            $y = $pdf->get_height() - 35;
-            $pdf->page_text($x, $y, $text, $font, $size);
+            $y = $pdf->get_height() - 20;
+            $pdf->page_text($x, $y, $text, $font, $size, [0.4, 0.4, 0.4]);
         }
     </script>
 </body>
