@@ -30,8 +30,7 @@ document.addEventListener('DOMContentLoaded', function () {
 			if (!valoresPorSubproducto[item.nombre][item.fecha]) {
 				valoresPorSubproducto[item.nombre][item.fecha] = 0;
 			}
-
-			valoresPorSubproducto[item.nombre][item.fecha] += item.total_kg;
+			valoresPorSubproducto[item.nombre][item.fecha] += parseFloat(item.total_kg);
 		});
 
 		// Ordenar las fechas de forma ascendente

@@ -39,7 +39,7 @@ document.addEventListener('DOMContentLoaded', function () {
 					name: 'Total',
 					data: data.map(item => ({
 						x: item.nombre,
-						y: parseFloat(item.total_kg.toFixed(3)) // Limitar a 3 decimales
+						y: parseFloat(parseFloat(item.total_kg).toFixed(3))
 					}))
 				}
 			],

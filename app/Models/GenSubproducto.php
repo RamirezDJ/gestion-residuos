@@ -28,4 +28,10 @@ class GenSubproducto extends Model
     {
         return $this->belongsTo(Subproducto::class);
     }
+
+    public function zona()
+    {
+        return $this->belongsTo(Zona::class, 'zona_id');
+    }
+
 }

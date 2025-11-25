@@ -28,21 +28,23 @@ class GraficasSemanalController extends Controller
 
     private function applyDataFilters($query, $periodo, $startDate, $endDate)
     {
+        $campoFecha = 'gen_semanals.fecha';
+
         if ($startDate && $endDate) {
-            $query->whereBetween('fecha', [
+            $query->whereBetween($campoFecha, [
                 Carbon::parse($startDate)->format('Y-m-d'),
                 Carbon::parse($endDate)->format('Y-m-d')
             ]);
         } else {
             switch ($periodo) {
                 case '7_dias':
-                    $query->whereBetween('fecha', [now()->subDays(7), now()]);
+                    $query->whereBetween($campoFecha, [now()->subDays(7), now()]);
                     break;
                 case '30_dias':
-                    $query->whereBetween('fecha', [now()->subDays(30), now()]);
+                    $query->whereBetween($campoFecha, [now()->subDays(30), now()]);
                     break;
                 case '90_dias':
-                    $query->whereBetween('fecha', [now()->subDays(90), now()]);
+                    $query->whereBetween($campoFecha, [now()->subDays(90), now()]);
                     break;
                 default:
                     // Sin filtro de fecha
@@ -51,15 +53,15 @@ class GraficasSemanalController extends Controller
         }
     }
 
-    // Obtener datos de una grafica especifica usando AJAX
     public function fetchGraphData(Request $request)
     {
         $tipoGrafica = $request->input('tipoGrafico');
         $periodo = $request->input('periodo', 'Todo');
-        $startDate = $request->input('startDate');
-        $endDate = $request->input('endDate');
-        $institutoId = Auth::user()->instituto_id;
 
+        $startDate = $request->input('inicio');
+        $endDate = $request->input('final');
+
+        $institutoId = Auth::user()->instituto_id;
 
         $baseQuery = GenSemanal::query();
         $this->applyDataFilters($baseQuery, $periodo, $startDate, $endDate);
@@ -78,7 +80,7 @@ class GraficasSemanalController extends Controller
                 $data = $this->getGraficoTendenciaResiduos($baseQuery, $institutoId);
                 break;
             case 'all':
-                // Obtener los datos para todas las gráficas
+                // Usamos clone() para no afectar la query original en cada llamada
                 $data = [
                     'top3' => $this->getTop3Generado($baseQuery->clone(), $institutoId),
                     'pieChart' => $this->getPorcentajeResiduos($baseQuery->clone(), $institutoId),
@@ -87,7 +89,6 @@ class GraficasSemanalController extends Controller
                 ];
                 break;
             default:
-                // Show an error if the data is not in the switch
                 return response()->json(['error' => 'Tipo de gráfica no válido'], 400);
         }
 
@@ -99,28 +100,31 @@ class GraficasSemanalController extends Controller
     // Obtener datos de top 3 zonas con mayor generacion
     private function getTop3Generado($query, $institutoId = null)
     {
-        $query->join('zonas_areas', 'gen_semanals.zonas_areas_id', '=', 'zonas_areas.id')
+        $q = $query->clone();
+
+        // Unimos con zonas para filtrar por instituto
+        $q->join('zonas_areas', 'gen_semanals.zonas_areas_id', '=', 'zonas_areas.id')
             ->join('zonas', 'zonas_areas.zona_id', '=', 'zonas.id')
-            ->join('areas', 'zonas_areas.area_id', '=', 'areas.id');
+            // CORRECCIÓN: Usamos 'categorias' y 'categoria_id' (que es lo que tienes en la BD)
+            ->join('categorias', 'gen_semanals.categoria_id', '=', 'categorias.id');
 
         if ($institutoId) {
-            $query->where('zonas.instituto_id', $institutoId);
+            $q->where('zonas.instituto_id', $institutoId);
         }
 
-        return $query->select(
-            'zonas.id as zona_id',
-            'zonas.nombre as zona',
-            // --- LÍNEA CORREGIDA ---
+        return $q->select(
+            'categorias.nombre as nombre',
             DB::raw('SUM(gen_semanals.kilos) as total_kg')
         )
-            ->groupBy('zonas.id', 'zonas.nombre')
-            ->orderBy('total_kg', 'DESC')
+            // Agrupamos por Categoría
+            ->groupBy('categorias.id', 'categorias.nombre')
+            ->orderByDesc('total_kg')
             ->limit(3)
             ->get()
             ->map(function ($item) {
                 return [
-                    'nombre' => $item->zona,
-                    'total_kg' =>  $item->total_kg
+                    'nombre' => $item->nombre,
+                    'total_kg' => (float) $item->total_kg
                 ];
             });
     }
@@ -128,26 +132,26 @@ class GraficasSemanalController extends Controller
     // Obtener datos de la grafica pastel de porcentaje de generacion por zonas
     private function getPorcentajeResiduos($query, $institutoId = null)
     {
-        $query->join('zonas_areas', 'gen_semanals.zonas_areas_id', '=', 'zonas_areas.id')
+        $q = $query->clone();
+
+        $q->join('zonas_areas', 'gen_semanals.zonas_areas_id', '=', 'zonas_areas.id')
             ->join('zonas', 'zonas_areas.zona_id', '=', 'zonas.id');
 
         if ($institutoId) {
-            $query->where('zonas.instituto_id', $institutoId);
+            $q->where('zonas.instituto_id', $institutoId);
         }
 
-        return $query->select(
-            'zonas.id as zona_id',
-            'zonas.nombre as zona',
-            // --- LÍNEA CORREGIDA ---
+        return $q->select(
+            'zonas.nombre as nombre',
             DB::raw('SUM(gen_semanals.kilos) as total_kg')
         )
             ->groupBy('zonas.id', 'zonas.nombre')
-            ->orderBy('total_kg', 'DESC')
             ->get()
             ->map(function ($item) {
                 return [
-                    'nombre' => $item->zona,
-                    'total_kg' =>  $item->total_kg
+                    'nombre' => $item->nombre,
+                    // IMPORTANTE: Forzamos número
+                    'total_kg' => (float) $item->total_kg
                 ];
             });
     }
@@ -180,28 +184,34 @@ class GraficasSemanalController extends Controller
 
     private function getGraficoTendenciaResiduos($query, $institutoId = null)
     {
-        $query->join('zonas_areas', 'gen_semanals.zonas_areas_id', '=', 'zonas_areas.id')
+        $q = $query->clone();
+
+        // 1. Joins necesarios para llegar al Instituto (Filtro de seguridad)
+        $q->join('zonas_areas', 'gen_semanals.zonas_areas_id', '=', 'zonas_areas.id')
             ->join('zonas', 'zonas_areas.zona_id', '=', 'zonas.id');
 
+        // 2. Join con Categorías (Para obtener el nombre del subproducto)
+        $q->join('categorias', 'gen_semanals.categoria_id', '=', 'categorias.id');
+
         if ($institutoId) {
-            $query->where('zonas.instituto_id', $institutoId);
+            $q->where('zonas.instituto_id', $institutoId);
         }
 
-        return $query->select(
+        return $q->select(
             'gen_semanals.fecha',
-            'zonas.id as zona_id',
-            'zonas.nombre as zona',
-            // --- LÍNEA CORREGIDA ---
+            'categorias.nombre as nombre_categoria', // Ahora seleccionamos la categoría
             DB::raw('SUM(gen_semanals.kilos) as total_kg')
         )
-            ->groupBy('gen_semanals.fecha', 'zonas.id')
+            // --- CAMBIO CLAVE: Agrupamos por FECHA y CATEGORÍA ---
+            ->groupBy('gen_semanals.fecha', 'categorias.id', 'categorias.nombre')
             ->orderBy('gen_semanals.fecha', 'ASC')
             ->get()
             ->map(function ($item) {
                 return [
-                    'fecha' => Carbon::parse($item->fecha)->format('Y-m-d'),
-                    'nombre' => $item->zona,
-                    'total_kg' =>  $item->total_kg
+                    'fecha' => $item->fecha,
+                    // Enviamos el nombre de la categoría como 'nombre' para que el JS no falle
+                    'nombre' => $item->nombre_categoria,
+                    'total_kg' => (float) $item->total_kg
                 ];
             });
     }

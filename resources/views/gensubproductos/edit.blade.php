@@ -41,10 +41,9 @@
                 @csrf
                 @method('PUT')
 
-                {{-- CAMPOS OCULTOS REQUERIDOS --}}
                 <input type="hidden" name="instituto_id" value="{{ $instituto_id }}">
-                <input type="hidden" name="fecha_inicio" value="{{ $inicio }}">
-                <input type="hidden" name="fecha_final" value="{{ $final }}">
+                <input type="hidden" name="inicio" value="{{ $inicio }}">
+                <input type="hidden" name="final" value="{{ $final }}">
 
                 <x-validation-errors class="mb-4" />
 
@@ -196,7 +195,7 @@
                     <div class="mb-2">
                         <div class="flex justify-between items-end mb-4 border-b pb-2">
                             <div>
-                                <span class="text-xs font-bold text-blue-600 uppercase tracking-widest">Editando Zona</span>
+                                <span class="text-xs font-bold text-gray-600 uppercase tracking-widest">Editando Zona</span>
                                 <h3 class="text-2xl font-bold text-gray-800">${zona.nombre}</h3>
                             </div>
                             <span class="text-sm text-gray-400 italic">Paso ${index + 1} de ${zonas.length}</span>
@@ -211,27 +210,27 @@
                                 </div>
                                 
                                 ${diasSeleccionados.map(dia => `
-                                            <div class="col-span-1 bg-blue-700 text-white text-center p-2 rounded-sm">
-                                                <div class="font-bold">${dia.diaNombre}</div>
-                                                <div class="text-xs opacity-75">${dia.diaCorto}</div>
-                                            </div>
-                                        `).join('')}
+                                                    <div class="col-span-1 bg-blue-700 text-white text-center p-2 rounded-sm">
+                                                        <div class="font-bold">${dia.diaNombre}</div>
+                                                        <div class="text-xs opacity-75">${dia.diaCorto}</div>
+                                                    </div>
+                                                `).join('')}
 
                                 ${subproductos.map(sub => {
                                     return `
-                                            <div class="col-span-2 mt-1">
-                                                <div class="w-full bg-white border border-gray-300 rounded px-3 py-2 text-gray-700 font-medium h-full flex items-center">
-                                                    ${sub.nombre}
-                                                </div>
-                                            </div>
+                                                    <div class="col-span-2 mt-1">
+                                                        <div class="w-full bg-white border border-gray-300 rounded px-3 py-2 text-gray-700 font-medium h-full flex items-center">
+                                                            ${sub.nombre}
+                                                        </div>
+                                                    </div>
 
-                                            ${diasSeleccionados.map((dia, i) => {
-                                                let valor = '';
-                                                if (lookup[zona.id] && lookup[zona.id][sub.id] && lookup[zona.id][sub.id][dia.fecha]) {
-                                                    valor = lookup[zona.id][sub.id][dia.fecha];
-                                                }
+                                                    ${diasSeleccionados.map((dia, i) => {
+                                                        let valor = '';
+                                                        if (lookup[zona.id] && lookup[zona.id][sub.id] && lookup[zona.id][sub.id][dia.fecha]) {
+                                                            valor = lookup[zona.id][sub.id][dia.fecha];
+                                                        }
 
-                                                return `
+                                                        return `
                                         <div class="col-span-1 mt-1">
                                             <input type="number" step="0.01" min="0" 
                                                 name="valores[${zona.id}][${sub.id}][${dia.fecha}]"
@@ -252,11 +251,11 @@
                                 </div>
 
                                 ${diasSeleccionados.map((dia, i) => `
-                                            <div class="col-span-1 bg-white border border-gray-300 text-center font-bold p-2 rounded-sm mt-2 text-gray-800 shadow-sm">
-                                                <span id="total-zona-${index}-dia-${i}">0.00</span> 
-                                                <span class="text-xs text-gray-400 font-normal">kg</span>
-                                            </div>
-                                        `).join('')}
+                                                    <div class="col-span-1 bg-white border border-gray-300 text-center font-bold p-2 rounded-sm mt-2 text-gray-800 shadow-sm">
+                                                        <span id="total-zona-${index}-dia-${i}">0.00</span> 
+                                                        <span class="text-xs text-gray-400 font-normal">kg</span>
+                                                    </div>
+                                                `).join('')}
 
                             </div>
                         </div>
@@ -270,11 +269,11 @@
 
                             ${esUltimo 
                                 ? `<button type="button" onclick="confirmarGuardado()" class="bg-slate-900 hover:bg-slate-800 text-white font-bold py-3 px-8 rounded shadow-lg uppercase text-sm transform hover:scale-105 transition">
-                                                Guardar Cambios <i class="fa-solid fa-save ml-2"></i>
-                                           </button>`
+                                                        Guardar Cambios <i class="fa-solid fa-save ml-2"></i>
+                                                   </button>`
                                 : `<button type="button" onclick="cambiarPaso(${index + 1})" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-8 rounded shadow uppercase text-sm">
-                                                Siguiente Zona <i class="fa-solid fa-arrow-right ml-2"></i>
-                                           </button>`
+                                                        Siguiente Zona <i class="fa-solid fa-arrow-right ml-2"></i>
+                                                   </button>`
                             }
                         </div>
                     </div>

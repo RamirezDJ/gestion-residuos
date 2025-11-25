@@ -14,12 +14,9 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-Route::middleware([
-    'auth:sanctum',
-    config('jetstream.auth_session'),
-    'verified',
-])->group(function () {
+Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',])->group(function () {
 
+    Route::get('/gensemanal/check-week', [RegistroSemanalController::class, 'checkWeek'])->name('gensemanal.checkWeek')->middleware(['can:Acceso a Inicio']);
     Route::get('/gensemanal/search', [RegistroSemanalController::class, 'search'])->name('gensemanal.search')->middleware(['can:Acceso a Inicio']);
     Route::resource('/gensemanal', RegistroSemanalController::class)->middleware(['can:Acceso a Inicio']);
     Route::delete('gensemanal/delete-week/{fecha}', [RegistroSemanalController::class, 'destroyWeek'])->name('gensemanal.destroyWeek')->middleware(['can:Acceso a Inicio']);
@@ -39,6 +36,7 @@ Route::middleware([
     Route::get('/graficassemanal/data/linechart', [GraficasSemanalController::class, 'getGraficoTendenciaResiduos'])->name('graficassemanal.data.linechart')->middleware(['can:Acceso a Graficas']);
 
     Route::get('/gensubproductos/search', [RegistroSubproductoController::class, 'search'])->name('gensubproductos.search')->middleware(['can:Acceso a Inicio']);
+    Route::get('/gensubproductos/check-week', [RegistroSubproductoController::class, 'checkWeek'])->name('gensubproductos.checkWeek')->middleware(['auth:sanctum', 'verified']);
     Route::resource('/gensubproductos', RegistroSubproductoController::class)->middleware(['can:Acceso a Inicio']);
     Route::delete('/gensubproductos/destroy-week/{fecha}', [RegistroSubproductoController::class, 'destroyWeekSubproductos'])->name('gensubproductos.destroyWeek')->middleware(['can:Acceso a Inicio']);
     Route::get('/gensubproductos/edit/{instituto_id}/{inicio}/{final}', [RegistroSubproductoController::class, 'edit'])->name('gensubproductos.editAll')->middleware(['can:Acceso a Inicio']);

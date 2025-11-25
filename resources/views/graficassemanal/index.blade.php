@@ -35,8 +35,8 @@
                     </div>
                 </div>
                 <!-- Botón para enviar los datos -->
-                <button id="submitDates" class="ml-4 bg-blue-500 text-white px-4 py-1 rounded-lg" 
-                onclick="fetchAllData()">
+                <button id="submitDates" class="ml-4 bg-blue-500 text-white px-4 py-1 rounded-lg"
+                    onclick="fetchAllData()">
                     Actualizar graficas
                 </button>
             </div>
@@ -120,21 +120,21 @@
                             <ul class="py-2 text-sm text-gray-700 dark:text-gray-200"
                                 aria-labelledby="dropdownDefaultButton1">
                                 <li>
-                                    <a data-time-range="Todo" onclick="selectOptionZonas('Todo')"
+                                    <a onclick="selectOptionZonas('Todo', 'Todo')"
                                         class="dropdown-option block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white cursor-pointer">Todo</a>
                                 </li>
                                 <li>
-                                    <a data-time-range="7_dias" onclick="selectOptionZonas('7 Días')"
+                                    <a onclick="selectOptionZonas('Últimos 7 Días', '7_dias')"
                                         class="dropdown-option block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white cursor-pointer">Últimos
                                         7 Días</a>
                                 </li>
                                 <li>
-                                    <a data-time-range="30_dias" onclick="selectOptionZonas('30 días')"
+                                    <a onclick="selectOptionZonas('Últimos 30 días', '30_dias')"
                                         class="dropdown-option block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white cursor-pointer">Últimos
                                         30 días</a>
                                 </li>
                                 <li>
-                                    <a data-time-range="90_dias" onclick="selectOptionZonas('90 días')"
+                                    <a onclick="selectOptionZonas('Últimos 90 días', '90_dias')"
                                         class="dropdown-option block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white cursor-pointer">Últimos
                                         90 días</a>
                                 </li>
@@ -192,21 +192,21 @@
                             <ul class="py-2 text-sm text-gray-700 dark:text-gray-200"
                                 aria-labelledby="dropdownDefaultButton2">
                                 <li>
-                                    <a data-time-range="Todo" onclick="selectOptionZonas2('Todo')"
+                                    <a onclick="selectOptionZonas2('Todo', 'Todo')"
                                         class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white cursor-pointer dropdown-option1">Todo</a>
                                 </li>
                                 <li>
-                                    <a data-time-range="7_dias" onclick="selectOptionZonas2('7 Días')"
+                                    <a onclick="selectOptionZonas2('Últimos 7 Días', '7_dias')"
                                         class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white cursor-pointer dropdown-option1">Últimos
                                         7 Días</a>
                                 </li>
                                 <li>
-                                    <a data-time-range="30_dias" onclick="selectOptionZonas2('30 días')"
+                                    <a onclick="selectOptionZonas2('Últimos 30 días', '30_dias')"
                                         class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white cursor-pointer dropdown-option1">Últimos
                                         30 días</a>
                                 </li>
                                 <li>
-                                    <a data-time-range="90_dias" onclick="selectOptionZonas2('90 días')"
+                                    <a onclick="selectOptionZonas2('Últimos 90 días', '90_dias')"
                                         class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white cursor-pointer dropdown-option1">Últimos
                                         90 días</a>
                                 </li>
@@ -242,7 +242,8 @@
 
                 <div id="data-labels-chart"></div>
 
-                <div class="grid grid-cols-1 items-center border-gray-200 border-t dark:border-gray-700 justify-between">
+                <div
+                    class="grid grid-cols-1 items-center border-gray-200 border-t dark:border-gray-700 justify-between">
                     <div class="flex justify-between items-center pt-5">
                         <!-- Button -->
                         <button id="dropdownDefaultButton3" data-dropdown-toggle="lastDaysdropdown3"
@@ -263,21 +264,21 @@
                             <ul class="py-2 text-sm text-gray-700 dark:text-gray-200"
                                 aria-labelledby="dropdownDefaultButton3">
                                 <li>
-                                    <a data-time-range="Todo" onclick="selectOptionZonas3('Todo')"
+                                    <a onclick="selectOptionZonas3('Todo', 'Todo')"
                                         class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white cursor-pointer dropdown-option2">Todo</a>
                                 </li>
                                 <li>
-                                    <a data-time-range="7_dias" onclick="selectOptionZonas3('7 Días')"
+                                    <a onclick="selectOptionZonas3('Últimos 7 Días', '7_dias')"
                                         class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white cursor-pointer dropdown-option2">Últimos
                                         7 Días</a>
                                 </li>
                                 <li>
-                                    <a data-time-range="30_dias" onclick="selectOptionZonas3('30 días')"
+                                    <a onclick="selectOptionZonas3('Últimos 30 días', '30_dias')"
                                         class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white cursor-pointer dropdown-option2">Últimos
                                         30 días</a>
                                 </li>
                                 <li>
-                                    <a data-time-range="90_dias" onclick="selectOptionZonas3('90 días')"
+                                    <a onclick="selectOptionZonas3('Últimos 90 días', '90_dias')"
                                         class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white cursor-pointer dropdown-option2">Últimos
                                         90 días</a>
                                 </li>
@@ -293,106 +294,134 @@
         <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
         <script>
-            // convertir los datos a json
-            window.GeneradoData = @json($top3Generado);
+            // Datos iniciales
+            window.GeneradoData = @json($top3Generado ?? []);
 
-            // Funciones para cada dropdown y que se puedan abrir de manera independiente
+            // 1. FUNCIONES AUXILIARES
+            function convertirFechaISO(fechaStr) {
+                if (!fechaStr) return '';
+                const partes = fechaStr.split('/');
+                if (partes.length === 3) {
+                    return `${partes[2]}-${partes[1]}-${partes[0]}`;
+                }
+                return fechaStr;
+            }
 
-            // Función para abrir/cerrar el dropdown / Grafica pastel
+            function formatearFechaVisual(date) {
+                const d = String(date.getDate()).padStart(2, '0');
+                const m = String(date.getMonth() + 1).padStart(2, '0');
+                const y = date.getFullYear();
+                return `${d}/${m}/${y}`;
+            }
+
+            function aplicarRangoRapido(rango) {
+                console.log('Aplicando rango rápido:', rango); // DEBUG
+                const fin = new Date();
+                const inicio = new Date();
+
+                if (rango === '7_dias') inicio.setDate(fin.getDate() - 7);
+                else if (rango === '30_dias') inicio.setDate(fin.getDate() - 30);
+                else if (rango === '90_dias') inicio.setDate(fin.getDate() - 90);
+                else inicio.setFullYear(fin.getFullYear() - 1);
+
+                // Verificar si existen los inputs antes de asignar valor
+                const inputStart = document.getElementById('startDate');
+                const inputEnd = document.getElementById('endDate');
+
+                if (inputStart && inputEnd) {
+                    inputStart.value = formatearFechaVisual(inicio);
+                    inputEnd.value = formatearFechaVisual(fin);
+                    fetchAllData();
+                } else {
+                    console.error("ERROR: No encuentro los inputs con id='startDate' o 'endDate'");
+                }
+            }
+
+            // 2. FUNCIONES DE DROPDOWNS
+            // Pastel
             function toggleDropdown() {
-                const dropdown = document.getElementById("lastDaysdropdown1");
-                dropdown.classList.toggle("hidden");
+                document.getElementById("lastDaysdropdown1").classList.toggle("hidden");
             }
 
-            // Función para seleccionar una opción y actualizar el texto del botón
-            function selectOptionZonas(option) {
-                const selectedText = document.getElementById("selectedOptionText1");
-                selectedText.textContent = option; // Cambia el texto del botón
-
-                // Cierra el dropdown después de seleccionar una opción
-                const dropdown = document.getElementById("lastDaysdropdown1");
-                dropdown.classList.add("hidden");
+            function selectOptionZonas(label, value) {
+                document.getElementById("selectedOptionText1").textContent = label;
+                document.getElementById("lastDaysdropdown1").classList.add("hidden");
+                aplicarRangoRapido(value);
             }
-
-            // Cerrar el dropdown si se hace clic fuera del área del dropdown o el botón
-            document.addEventListener('click', function(event) {
-                const dropdown = document.getElementById("lastDaysdropdown1");
-                const button = document.getElementById("dropdownDefaultButton1");
-
-                // Si se hace clic fuera del dropdown y el botón, cerramos el dropdown
-                if (!dropdown.contains(event.target) && !button.contains(event.target)) {
-                    dropdown.classList.add("hidden");
-                }
-            });
-
-            // Función para abrir/cerrar el dropdown / Grafica de Barra
+            // Barras
             function toggleDropdown2() {
-                const dropdown = document.getElementById("lastDaysdropdown2");
-                dropdown.classList.toggle("hidden");
+                document.getElementById("lastDaysdropdown2").classList.toggle("hidden");
             }
 
-            // Función para seleccionar una opción y actualizar el texto del botón
-            function selectOptionZonas2(option) {
-                const selectedText = document.getElementById("selectedOptionText2");
-                selectedText.textContent = option; // Cambia el texto del botón
-
-                // Cierra el dropdown después de seleccionar una opción
-                const dropdown = document.getElementById("lastDaysdropdown2");
-                dropdown.classList.add("hidden");
+            function selectOptionZonas2(label, value) {
+                document.getElementById("selectedOptionText2").textContent = label;
+                document.getElementById("lastDaysdropdown2").classList.add("hidden");
+                aplicarRangoRapido(value);
             }
-
-            // Cerrar el dropdown si se hace clic fuera del área del dropdown o el botón
-            document.addEventListener('click', function(event) {
-                const dropdown = document.getElementById("lastDaysdropdown2");
-                const button = document.getElementById("dropdownDefaultButton2");
-
-                // Si se hace clic fuera del dropdown y el botón, cerramos el dropdown
-                if (!dropdown.contains(event.target) && !button.contains(event.target)) {
-                    dropdown.classList.add("hidden");
-                }
-            });
-
-
-            // Función para abrir/cerrar el dropdown / Grafica de tendencia
+            // Tendencia
             function toggleDropdown3() {
-                const dropdown = document.getElementById("lastDaysdropdown3");
-                dropdown.classList.toggle("hidden");
+                document.getElementById("lastDaysdropdown3").classList.toggle("hidden");
             }
 
-            // Función para seleccionar una opción y actualizar el texto del botón
-            function selectOptionZonas3(option) {
-                const selectedText = document.getElementById("selectedOptionText3");
-                selectedText.textContent = option; // Cambia el texto del botón
-
-                // Cierra el dropdown después de seleccionar una opción
-                const dropdown = document.getElementById("lastDaysdropdown3");
-                dropdown.classList.add("hidden");
+            function selectOptionZonas3(label, value) {
+                document.getElementById("selectedOptionText3").textContent = label;
+                document.getElementById("lastDaysdropdown3").classList.add("hidden");
+                aplicarRangoRapido(value);
             }
 
-            // Cerrar el dropdown si se hace clic fuera del área del dropdown o el botón
+            // Cierres globales
             document.addEventListener('click', function(event) {
-                const dropdown = document.getElementById("lastDaysdropdown3");
-                const button = document.getElementById("dropdownDefaultButton3");
-
-                // Si se hace clic fuera del dropdown y el botón, cerramos el dropdown
-                if (!dropdown.contains(event.target) && !button.contains(event.target)) {
-                    dropdown.classList.add("hidden");
-                }
+                const closes = [{
+                        dd: 'lastDaysdropdown1',
+                        btn: 'dropdownDefaultButton1'
+                    },
+                    {
+                        dd: 'lastDaysdropdown2',
+                        btn: 'dropdownDefaultButton2'
+                    },
+                    {
+                        dd: 'lastDaysdropdown3',
+                        btn: 'dropdownDefaultButton3'
+                    }
+                ];
+                closes.forEach(item => {
+                    const dd = document.getElementById(item.dd);
+                    const btn = document.getElementById(item.btn);
+                    if (dd && btn && !dd.contains(event.target) && !btn.contains(event.target)) {
+                        dd.classList.add("hidden");
+                    }
+                });
             });
 
-            // Función para obtener los datos del gráfico desde el servidor
+            // 3. FETCH DATA (CON DEBUG)
             function fetchAllData() {
-                var startDate = document.getElementById('startDate').value;
-                var endDate = document.getElementById('endDate').value;
+                console.log("Iniciando fetchAllData..."); // DEBUG
 
-                // Verificar que ambos campos de fecha no estén vacíos
-                if (!startDate || !endDate) {
+                var inputStart = document.getElementById('startDate');
+                var inputEnd = document.getElementById('endDate');
+
+                if (!inputStart || !inputEnd) {
+                    console.error("ERROR CRÍTICO: No existen los inputs de fecha en el DOM.");
+                    return;
+                }
+
+                var startRaw = inputStart.value;
+                var endRaw = inputEnd.value;
+
+                console.log("Fechas crudas:", startRaw, endRaw); // DEBUG
+
+                if (!startRaw || !endRaw) {
                     alert("Por favor, selecciona un rango de fechas válido.");
                     return;
                 }
 
-                // Realiza la solicitud AJAX a la ruta correcta usando fetch
-                fetch(`/graficassemanal/data?tipoGrafico=all&startDate=${startDate}&endDate=${endDate}`, {
+                var inicio = convertirFechaISO(startRaw);
+                var final = convertirFechaISO(endRaw);
+
+                var url = `/graficassemanal/data?tipoGrafico=all&inicio=${inicio}&final=${final}`;
+                console.log("URL generada:", url); // DEBUG
+
+                fetch(url, {
                         method: 'GET',
                         headers: {
                             Accept: 'application/json',
@@ -400,27 +429,24 @@
                         }
                     })
                     .then((response) => {
-                        if (!response.ok) {
-                            throw new Error('Error en la solicitud');
-                        }
+                        console.log("Status respuesta:", response.status); // DEBUG
+                        if (!response.ok) throw new Error('Error en la solicitud HTTP: ' + response.status);
                         return response.json();
                     })
                     .then((data) => {
-                        // Emitir un evento global para actualizar gráficos
-                        document.dispatchEvent(new CustomEvent('updateCharts', {
+                        console.log("Datos recibidos del servidor:", data); // DEBUG
+
+                        // Disparar evento
+                        const event = new CustomEvent('updateCharts', {
                             detail: data
-                        })); // Llama a una función para renderizar el gráfico
+                        });
+                        document.dispatchEvent(event);
+                        console.log("Evento 'updateCharts' despachado correctamente.");
                     })
                     .catch((error) => {
-                        console.error('Error en la solicitud AJAX:', error);
-                        alert('Hubo un error al obtener los datos.');
+                        console.error('Error en FETCH:', error);
+                        alert('Error al cargar datos. Revisa la consola (F12).');
                     });
-            }
-
-            // Función para renderizar el gráfico
-            function renderTrendChart(data) {
-                // Aquí deberías agregar tu lógica para renderizar el gráfico
-                console.log(data); // Muestra los datos recibidos para verificar
             }
         </script>
     @endpush

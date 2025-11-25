@@ -27,19 +27,17 @@ class RegistroSemanalController extends Controller
     {
         $institutoId = auth()->user()->instituto_id;
 
-        // Obtenemos el filtro de 'tiempo' de la URL. Si no hay, 'general' es el default.
         $tiempo = $request->input('tiempo', 'general');
 
         $queryBase = GenSemanal::join('zonas_areas', 'gen_semanals.zonas_areas_id', '=', 'zonas_areas.id')
-            ->join('zonas', 'zonas_areas.zona_id', '=', 'zonas.id') // <--- ¡FALTABA ESTA LÍNEA!
+            ->join('zonas', 'zonas_areas.zona_id', '=', 'zonas.id')
             ->join('categorias', 'gen_semanals.categoria_id', '=', 'categorias.id')
             ->where('zonas.instituto_id', $institutoId);
 
         $viewName = '';
 
         if ($tiempo == 'zonas_areas') {
-            // --- FILTRO 1: VISTA DETALLADA (La que ya tenemos) ---
-            // Agrupada por Fecha, Turno, Zona y Área
+
             $registros = $queryBase->select(
                 'gen_semanals.fecha',
                 'gen_semanals.turno',
@@ -52,47 +50,36 @@ class RegistroSemanalController extends Controller
                 ->orderBy('gen_semanals.fecha', 'DESC')
                 ->get();
 
-            $viewName = 'gensemanal.partials.table-detalle'; // Usaremos una vista para esta tabla
-
+            $viewName = 'gensemanal.partials.table-detalle';
         } else if ($tiempo == 'zonas_conteo') {
-            // --- FILTRO 2: VISTA POR ZONAS (Tu "Zona y numero de areas") ---
-            // Agrupada solo por Zona, sumando todo
             $registros = $queryBase->select(
                 'zonas.nombre as zona',
                 DB::raw('SUM(gen_semanals.kilos) as total_kilos_zona'),
-                DB::raw('COUNT(DISTINCT zonas_areas.area_id) as conteo_areas') // Contar áreas únicas
+                DB::raw('COUNT(DISTINCT zonas_areas.area_id) as conteo_areas')
             )
                 ->groupBy('zonas.nombre')
                 ->orderBy('zonas.nombre')
                 ->get();
 
-            $viewName = 'gensemanal.partials.table-zonas'; // Nueva vista
-
+            $viewName = 'gensemanal.partials.table-zonas';
         } else {
-            // --- FILTRO 3: VISTA GENERAL (POR SEMANA CALENDARIO) ---
             $registros = $queryBase->select(
 
-                // 1. Calcula el Lunes
                 DB::raw('DATE_ADD(MIN(gen_semanals.fecha), INTERVAL(-WEEKDAY(MIN(gen_semanals.fecha))) DAY) as fecha_inicio'),
-                // 2. Calcula el Domingo
                 DB::raw('DATE_ADD(MIN(gen_semanals.fecha), INTERVAL(6 - WEEKDAY(MIN(gen_semanals.fecha))) DAY) as fecha_final'),
-
                 DB::raw('SUM(gen_semanals.kilos) as total_kilos_semana'),
-                DB::raw('YEARWEEK(gen_semanals.fecha, 1) as anio_semana') // gen_semanals.fecha aquí
+                DB::raw('YEARWEEK(gen_semanals.fecha, 1) as anio_semana')
             )
                 ->groupBy('anio_semana')
-                ->orderBy(DB::raw('MIN(gen_semanals.fecha)'), 'DESC') // gen_semanals.fecha aquí
+                ->orderBy(DB::raw('MIN(gen_semanals.fecha)'), 'DESC')
                 ->get();
 
             $viewName = 'gensemanal.partials.table-general';
         }
 
-        // Si la petición es AJAX (de la búsqueda), solo devolvemos la tabla
         if ($request->ajax()) {
             return view($viewName, compact('registros'));
         }
-
-        // Si es una carga de página normal, devolvemos la página completa
         return view('gensemanal.index', compact('registros', 'viewName', 'tiempo'));
     }
 
@@ -126,6 +113,24 @@ class RegistroSemanalController extends Controller
 
         // CORRECCIÓN: Eliminamos 'categorias' de aquí, ya no es necesaria.
         return view('gensemanal.create', compact('instituto', 'zonas'));
+    }
+
+    public function checkWeek(Request $request)
+    {
+        $inicio = $request->input('inicio');
+        $final = $request->input('final');
+        $turno = $request->input('turno');
+        $institutoId = auth()->user()->instituto_id;
+
+        $exists = DB::table('gen_semanals')
+            ->join('zonas_areas', 'gen_semanals.zonas_areas_id', '=', 'zonas_areas.id')
+            ->join('zonas', 'zonas_areas.zona_id', '=', 'zonas.id')
+            ->where('zonas.instituto_id', $institutoId) 
+            ->where('gen_semanals.turno', $turno)
+            ->whereBetween('gen_semanals.fecha', [$inicio, $final])
+            ->exists();
+
+        return response()->json(['exists' => $exists]);
     }
 
     /**
@@ -177,7 +182,7 @@ class RegistroSemanalController extends Controller
                             $datosInsertar[] = [
                                 'fecha'          => $fechaDelRegistro,
                                 'turno'          => $turno,
-                                'zonas_areas_id' => $zonaAreaId, 
+                                'zonas_areas_id' => $zonaAreaId,
                                 'categoria_id'   => $categoriaId,
                                 'kilos'          => $kilos,
                                 'created_at'     => now(),

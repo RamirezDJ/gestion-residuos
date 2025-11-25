@@ -128,66 +128,109 @@
             document.getElementById('btn-generar').addEventListener('click', function() {
                 const fInicioRaw = document.getElementById('fecha_inicio').value;
                 const fFinRaw = document.getElementById('fecha_fin').value;
+                const btn = this; // Referencia al botón
 
                 if (!fInicioRaw || !fFinRaw) {
                     Swal.fire('Atención', 'Seleccione ambas fechas para continuar.', 'warning');
                     return;
                 }
 
-                // --- LÓGICA DE DETECCIÓN DE FORMATO ---
-                function parsearFechasCoherentes(fechaStr1, fechaStr2) {
-                    const p1 = fechaStr1.split(/[-/]/);
-                    const p2 = fechaStr2.split(/[-/]/);
-
-                    let formatoEsUS = false; // Por defecto asumimos Español (DD/MM/YYYY)
-
-                    // Si alguna fecha tiene el segundo valor > 12 (ej: 10/27/2025), ES formato US (MM/DD/YYYY)
-                    if (parseInt(p1[1]) > 12 || parseInt(p2[1]) > 12) {
-                        formatoEsUS = true;
-                    }
-
-                    function crearFecha(partes, esUS) {
-                        const v0 = parseInt(partes[0]);
-                        const v1 = parseInt(partes[1]);
-                        const v2 = parseInt(partes[2]);
-
-                        if (esUS) {
-                            // Mes(0) / Día(1) / Año(2)
-                            return new Date(v2, v0 - 1, v1);
-                        } else {
-                            // Día(0) / Mes(1) / Año(2)
-                            return new Date(v2, v1 - 1, v0);
-                        }
-                    }
-
-                    return {
-                        inicio: crearFecha(p1, formatoEsUS),
-                        fin: crearFecha(p2, formatoEsUS)
-                    };
+                // 1. LEER FECHAS SEGURAS
+                function crearFechaSegura(fechaStr) {
+                    const partes = fechaStr.split('/');
+                    return new Date(partes[2], partes[0] - 1, partes[1]);
                 }
 
-                // Procesamos ambas fechas juntas para mantener coherencia
-                const fechasProcesadas = parsearFechasCoherentes(fInicioRaw, fFinRaw);
-                const inicio = fechasProcesadas.inicio;
-                const fin = fechasProcesadas.fin;
+                const inicio = crearFechaSegura(fInicioRaw);
+                const fin = crearFechaSegura(fFinRaw);
 
-                // Validaciones
+                // 2. VALIDACIONES
                 if (isNaN(inicio.getTime()) || isNaN(fin.getTime())) {
                     Swal.fire('Error', 'Formato de fecha no válido.', 'error');
                     return;
                 }
-
                 if (inicio > fin) {
                     Swal.fire('Error', 'La fecha inicial no puede ser mayor a la final.', 'error');
                     return;
                 }
 
-                // Generar días
+                // 3. CHECK AJAX
+                const inicioISO = inicio.toISOString().split('T')[0];
+                const finISO = fin.toISOString().split('T')[0];
+
+                const textoOriginal = btn.innerText;
+                btn.innerText = 'Verificando...';
+                btn.disabled = true; // Bloqueo temporal solo mientras carga
+
+                fetch(`{{ route('gensubproductos.checkWeek') }}?inicio=${inicioISO}&final=${finISO}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.exists) {
+                            Swal.fire({
+                                icon: 'warning',
+                                title: 'Semana ya registrada',
+                                text: 'Ya existen registros en este rango. Verifique sus fechas.',
+                                confirmButtonColor: '#3085d6',
+                                confirmButtonText: 'Entendido'
+                            }).then((result) => {
+                                // AQUÍ ESTÁ EL CAMBIO:
+                                // Si el usuario da clic en el botón, recargamos la página
+                                if (result.isConfirmed) {
+                                    window.location.reload();
+                                }
+                            });
+
+                            // Aunque se vaya a recargar, por seguridad reseteamos el botón visualmente un instante
+                            btn.innerText = textoOriginal;
+                            btn.disabled = false;
+                            return;
+                        }
+
+                        // SI TODO ESTÁ BIEN: GENERAMOS LA TABLA
+                        generarTablaWizard(inicio, fin);
+
+                        // RESTO DEL CÓDIGO NORMAL...
+                        btn.innerText = 'Actualizar Días';
+                        btn.disabled = false;
+
+                        const Toast = Swal.mixin({
+                            toast: true,
+                            position: 'bottom-end',
+                            showConfirmButton: false,
+                            timer: 3000,
+                            timerProgressBar: true, // Opcional: se ve bonito
+                            didOpen: (toast) => {
+                                toast.addEventListener('mouseenter', Swal.stopTimer)
+                                toast.addEventListener('mouseleave', Swal.resumeTimer)
+                            }
+                        });
+                        Toast.fire({
+                            icon: 'success',
+                            title: 'Tabla generada correctamente'
+                        });
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        Swal.fire('Error', 'No se pudo verificar la semana.', 'error');
+                        btn.innerText = textoOriginal;
+                        btn.disabled = false;
+                    });
+            });
+
+            // (El resto de tus funciones generarTablaWizard, renderizarWizard, etc. se quedan igual)
+
+            // 5. FUNCIÓN SEPARADA PARA GENERAR EL WIZARD (Para mantener el código limpio)
+            function generarTablaWizard(inicio, fin) {
                 diasSeleccionados = [];
-                // Clonamos para iterar
                 let d = new Date(inicio);
+                let contadorSeguridad = 0;
 
                 while (d <= fin) {
+                    if (contadorSeguridad > 20) {
+                        Swal.fire('Error', 'El rango de fechas es demasiado grande (máx 20 días).', 'error');
+                        return;
+                    }
+
                     const year = d.getFullYear();
                     const month = String(d.getMonth() + 1).padStart(2, '0');
                     const day = String(d.getDate()).padStart(2, '0');
@@ -199,16 +242,11 @@
                     });
 
                     d.setDate(d.getDate() + 1);
+                    contadorSeguridad++;
                 }
 
-                // UI
-                document.getElementById('fecha_inicio').disabled = true;
-                document.getElementById('fecha_fin').disabled = true;
-                this.classList.add('opacity-50', 'cursor-not-allowed');
-                this.innerText = 'Días Generados';
-
                 renderizarWizard();
-            });
+            }
 
             // --- RENDERIZADOR (Se mantiene igual) ---
             function renderizarWizard() {
@@ -234,7 +272,7 @@
                     <div class="mb-6 mt-2">
                         <div class="flex justify-between items-end mb-4 pb-2 border-b border-gray-200">
                             <div>
-                                <span class="text-xs font-bold text-blue-600 uppercase tracking-widest">Zona Activa</span>
+                                <span class="text-xs font-bold text-gray-600 uppercase tracking-widest">Zona Activa</span>
                                 <h3 class="text-2xl font-bold text-gray-700">${zona.nombre}</h3>
                             </div>
                             <span class="text-gray-400 text-sm italic">Paso ${index + 1} de ${zonas.length}</span>
@@ -248,20 +286,20 @@
                                 </div>
                                 
                                 ${diasSeleccionados.map(dia => `
-                                            <div class="col-span-1 bg-blue-600 text-center text-white p-2 rounded-sm border border-blue-700/20">
-                                                <div class="text-base font-bold">${dia.diaNombre}</div>
-                                                <div class="text-xs opacity-80">${dia.diaCorto}</div>
-                                            </div>
-                                        `).join('')}
+                                                                                    <div class="col-span-1 bg-blue-600 text-center text-white p-2 rounded-sm border border-blue-700/20">
+                                                                                        <div class="text-base font-bold">${dia.diaNombre}</div>
+                                                                                        <div class="text-xs opacity-80">${dia.diaCorto}</div>
+                                                                                    </div>
+                                                                                `).join('')}
 
                                 ${subproductos.map(sub => `
-                                            <div class="col-span-2 mb-1 mt-1">
-                                                <div class="w-full bg-gray-50 border border-gray-200 rounded px-3 py-2 text-gray-700 font-medium">
-                                                    ${sub.nombre}
-                                                </div>
-                                            </div>
+                                                                                    <div class="col-span-2 mb-1 mt-1">
+                                                                                        <div class="w-full bg-gray-50 border border-gray-200 rounded px-3 py-2 text-gray-700 font-medium">
+                                                                                            ${sub.nombre}
+                                                                                        </div>
+                                                                                    </div>
 
-                                            ${diasSeleccionados.map((dia, i) => `
+                                                                                    ${diasSeleccionados.map((dia, i) => `
                                         <div class="col-span-1 mb-1 mt-1">
                                             <input type="number" step="0.01" min="0" 
                                                 name="valores[${zona.id}][${sub.id}][${dia.fecha}]"
@@ -271,17 +309,17 @@
                                                 oninput="recalcularTotales(${index}, ${i})">
                                         </div>
                                     `).join('')}
-                                        `).join('')}
+                                                                                `).join('')}
 
                                 <div class="col-span-2 bg-green-400 text-center text-lg font-medium p-2 rounded-sm mt-2 border border-green-500/20">
                                     <span>Total</span>
                                 </div>
 
                                 ${diasSeleccionados.map((dia, i) => `
-                                            <div class="col-span-1 bg-gray-100 text-center text-lg font-bold p-2 rounded-sm mt-2 border border-gray-300 text-gray-700">
-                                                <span id="total-zona-${index}-dia-${i}">0.00</span> <span class="text-xs font-normal text-gray-500">kg</span>
-                                            </div>
-                                        `).join('')}
+                                                                                    <div class="col-span-1 bg-gray-100 text-center text-lg font-bold p-2 rounded-sm mt-2 border border-gray-300 text-gray-700">
+                                                                                        <span id="total-zona-${index}-dia-${i}">0.00</span> <span class="text-xs font-normal text-gray-500">kg</span>
+                                                                                    </div>
+                                                                                `).join('')}
 
                             </div>
                         </div>
@@ -295,11 +333,11 @@
 
                             ${esUltimo 
                                 ? `<button type="button" onclick="confirmarGuardado()" class="bg-slate-900 hover:bg-slate-800 text-white font-bold py-3 px-8 rounded shadow-lg uppercase tracking-wide text-sm transform hover:scale-105 transition">
-                                             Guardar Registro
-                                           </button>`
+                                                                                     Guardar Registro
+                                                                                   </button>`
                                 : `<button type="button" onclick="cambiarPaso(${index + 1})" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-8 rounded shadow uppercase text-sm">
-                                             Siguiente
-                                           </button>`
+                                                                                     Siguiente
+                                                                                   </button>`
                             }
                         </div>
                     </div>

@@ -218,19 +218,29 @@
             let pasoActual = 0;
             let diasGenerados = []; // Un array para guardar los divs de los días
 
-            // --- 3. BOTÓN PRINCIPAL: GENERAR DÍAS ---
+            // --- 3. BOTÓN PRINCIPAL: GENERAR DÍAS (LÓGICA ACTUALIZADA) ---
             botonGenerar.addEventListener('click', function() {
-                // Limpiamos todo para una nueva generación
+                // Limpiamos todo visualmente
                 container.innerHTML = '';
                 diasGenerados = [];
                 pasoActual = 0;
 
-                // --- Validaciones de Fechas (Sin cambios) ---
+                // --- A. Validaciones Originales ---
                 const fechaInicialStr = parsearFecha(fechaInicialInput.value);
                 const fechaFinalStr = parsearFecha(fechaFinalInput.value);
 
+                // NUEVO: Capturar el turno para verificar duplicados
+                const turnoSelect = document.querySelector('select[name="turno"]');
+                const turno = turnoSelect.value;
+
                 if (!fechaInicialStr || !fechaFinalStr) {
                     alert('Por favor, seleccione una fecha inicial y final válidas.');
+                    return;
+                }
+
+                // Validación de turno
+                if (!turno || turno === '-- Seleccione un turno --') {
+                    alert('Por favor, seleccione un turno antes de generar.');
                     return;
                 }
 
@@ -249,57 +259,112 @@
                     alert('El rango seleccionado no puede ser mayor a 7 días (1 semana).');
                     return;
                 }
-                // --- Fin de Validaciones ---
+
+                // Deshabilitamos el botón para evitar doble click
+                botonGenerar.disabled = true;
+                const textoOriginalBtn = botonGenerar.innerText;
+                botonGenerar.innerText = 'Verificando...';
+
+                // --- B. PETICIÓN AJAX (Verificar Duplicados) ---
+                fetch(
+                        `{{ route('gensemanal.checkWeek') }}?inicio=${fechaInicialStr}&final=${fechaFinalStr}&turno=${turno}`
+                        )
+                    .then(response => response.json())
+                    .then(data => {
+
+                        // CASO 1: YA EXISTE REGISTRO
+                        if (data.exists) {
+                            Swal.fire({
+                                icon: 'warning',
+                                title: 'Semana ya registrada',
+                                text: 'Ya existen registros en este rango para el turno seleccionado. Verifique sus fechas.',
+                                confirmButtonColor: '#3085d6',
+                                confirmButtonText: 'Entendido'
+                            }).then((result) => {
+                                if (result.isConfirmed) {
+                                    window.location.reload(); // Recarga la página al confirmar
+                                }
+                            });
+
+                            botonGenerar.innerText = textoOriginalBtn;
+                            botonGenerar.disabled = false;
+                            return; // Detenemos la ejecución
+                        }
+
+                        // CASO 2: NO EXISTE, GENERAMOS LA TABLA (Tu lógica original)
+                        let fechaActual = new Date(fechaInicial);
+
+                        while (fechaActual <= fechaFinal) {
+                            // Clonamos la plantilla
+                            const diaClonado = template.content.cloneNode(true);
+
+                            // Formateamos fechas
+                            const fechaISO = fechaActual.toISOString().split('T')[0];
+                            const fechaVisible = fechaActual.toLocaleDateString('es-ES', {
+                                day: '2-digit',
+                                month: '2-digit',
+                                year: 'numeric'
+                            });
+                            const diaSemana = fechaActual.toLocaleDateString('es-ES', {
+                                weekday: 'long'
+                            });
+
+                            // Actualizamos el título del día
+                            diaClonado.querySelector('.dia-titulo').textContent =
+                                `Registro del ${diaSemana}, ${fechaVisible}`;
+
+                            // Actualizamos el 'name' de todos los inputs en el clon
+                            const inputs = diaClonado.querySelectorAll('input');
+                            inputs.forEach(input => {
+                                input.name = input.name.replace(
+                                    'TEMPLATE_NAME',
+                                    `valor_kg[${fechaISO}]`
+                                );
+                            });
+
+                            // Añadimos el día clonado al DOM
+                            container.appendChild(diaClonado);
+                            diasGenerados.push(container.lastElementChild);
+
+                            // Avanzamos al siguiente día
+                            fechaActual.setDate(fechaActual.getDate() + 1);
+                        }
 
 
-                // --- Lógica de Generación (Bucle while) ---
-                let fechaActual = new Date(fechaInicial);
-                while (fechaActual <= fechaFinal) {
+                        if (diasGenerados.length > 0) {
+                            mostrarPaso(pasoActual);
+                            controlesNavegacion.style.display = 'flex';
+                            seccionSubmitFinal.style.display = 'none';
+                        }
 
-                    // Clonamos la plantilla
-                    const diaClonado = template.content.cloneNode(true);
 
-                    // Formateamos fechas
-                    const fechaISO = fechaActual.toISOString().split('T')[0];
-                    const fechaVisible = fechaActual.toLocaleDateString('es-ES', {
-                        day: '2-digit',
-                        month: '2-digit',
-                        year: 'numeric'
+                        botonGenerar.innerText = 'Actualizar Días';
+                        botonGenerar.disabled = false;
+
+                        const Toast = Swal.mixin({
+                            toast: true,
+                            position: 'bottom-end',
+                            showConfirmButton: false,
+                            timer: 3000,
+                            timerProgressBar: true, 
+                            didOpen: (toast) => {
+                                toast.addEventListener('mouseenter', Swal.stopTimer)
+                                toast.addEventListener('mouseleave', Swal.resumeTimer)
+                            }
+                        });
+
+                        Toast.fire({
+                            icon: 'success',
+                            title: 'Tabla generada correctamente'
+                        });
+                    })
+
+                    .catch(error => {
+                        console.error('Error:', error);
+                        Swal.fire('Error', 'No se pudo verificar la semana.', 'error');
+                        botonGenerar.innerText = textoOriginalBtn;
+                        botonGenerar.disabled = false;
                     });
-                    const diaSemana = fechaActual.toLocaleDateString('es-ES', {
-                        weekday: 'long'
-                    });
-
-                    // Actualizamos el título del día
-                    diaClonado.querySelector('.dia-titulo').textContent =
-                        `Registro del ${diaSemana}, ${fechaVisible}`;
-
-                    // Actualizamos el 'name' de todos los inputs en el clon
-                    const inputs = diaClonado.querySelectorAll('input');
-                    inputs.forEach(input => {
-                        input.name = input.name.replace(
-                            'TEMPLATE_NAME',
-                            `valor_kg[${fechaISO}]`
-                        );
-                    });
-
-                    // Añadimos el día clonado al DOM
-                    container.appendChild(diaClonado);
-
-                    // Guardamos la REFERENCIA al div del día en nuestro array
-                    // Usamos .lastElementChild porque el clon se añade dentro del container
-                    diasGenerados.push(container.lastElementChild);
-
-                    // Avanzamos al siguiente día
-                    fechaActual.setDate(fechaActual.getDate() + 1);
-                }
-
-                // --- 4. INICIALIZAR EL WIZARD ---
-                if (diasGenerados.length > 0) {
-                    mostrarPaso(pasoActual); // Mostramos el primer paso (Lunes)
-                    controlesNavegacion.style.display = 'flex'; // Mostramos los botones "Siguiente"
-                    seccionSubmitFinal.style.display = 'none'; // Nos aseguramos que el submit esté oculto
-                }
             });
 
             // --- 5. EVENT LISTENERS PARA NAVEGACIÓN ---

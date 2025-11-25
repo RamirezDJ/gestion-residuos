@@ -3,12 +3,13 @@ document.addEventListener('DOMContentLoaded', function () {
     const chartContainer = document.getElementById('semanal-chart');
     let chart;
 
+    // Definimos la función
     function fetchPredictions(zonaId) {
         fetch(`/prediccionesZonas/obtenerPredicciones?zona_id=${zonaId}`)
             .then(response => response.json())
             .then(data => {
-                if (!data.length) {
-                    alert('No hay datos disponibles para esta zona.');
+                if (!data || !data.length) {
+                    // Si no hay datos, limpiamos gráfico y salimos silenciosamente o con alert
                     if (chart) chart.destroy();
                     return;
                 }
@@ -28,19 +29,21 @@ document.addEventListener('DOMContentLoaded', function () {
                 chart.render();
             })
             .catch(error => {
-                console.error('Error al obtener las predicciones:', error);
-                alert('Hubo un error al cargar los datos. Inténtalo nuevamente.');
+                console.error('Error al obtener predicciones:', error);
             });
     }
 
-    zonaSelect.addEventListener('change', function () {
-        const zonaId = this.value;
-        if (zonaId) {
-            fetchPredictions(zonaId);
-        }
-    });
+    // --- CORRECCIÓN: PROTECCIÓN CONTRA NULOS ---
+    // Solo ejecutamos lógica si el elemento existe en el HTML actual
+    if (zonaSelect) {
+        zonaSelect.addEventListener('change', function () {
+            const zonaId = this.value;
+            if (zonaId) fetchPredictions(zonaId);
+        });
 
-    if (zonaSelect.value) {
-        fetchPredictions(zonaSelect.value);
+        // Carga inicial
+        if (zonaSelect.value) {
+            fetchPredictions(zonaSelect.value);
+        }
     }
 });

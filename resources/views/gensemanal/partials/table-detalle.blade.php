@@ -6,13 +6,13 @@
             <th scope="col" class="px-4 py-3">Area asignada</th>
             <th scope="col" class="px-4 py-3">Turno</th>
             <th scope="col" class="px-4 py-3">Total generado</th>
-            <th scope="col" class="px-4 py-3">Acciones</th>
+            {{-- SE ELIMINÓ LA COLUMNA ACCIONES AQUÍ --}}
         </tr>
     </thead>
     <tbody class="text-center">
         @foreach ($registros as $registro)
             <tr class="border-b dark:border-gray-900">
-                
+
                 <td class="px-4 py-3 font-medium text-gray-900 whitespace-nowrap dark:text-white">
                     {{ \Carbon\Carbon::parse($registro->fecha)->format('d/m/Y') }}
                 </td>
@@ -22,15 +22,7 @@
                 <td class="px-4 py-3">
                     {{ $registro->total_kilos_area }} kg
                 </td>
-                <td class="px-4 py-3 flex items-center justify-center gap-2">
-                    <a
-                        href="{{ route('gensemanal.editAll', ['fecha' => $registro->fecha, 'turno' => $registro->turno]) }}">
-                        <i class="fa-solid fa-pen-to-square"></i>
-                    </a>
-                    <a href="{{ route('gensemanal.showAll', ['fecha' => $registro->fecha, 'turno' => $registro->turno])}}">
-                        <i class="fa-solid fa-eye"></i>
-                    </a>
-                </td>
+                {{-- SE ELIMINÓ LA CELDA DE BOTONES (EDITAR/VER) AQUÍ --}}
             </tr>
         @endforeach
     </tbody>

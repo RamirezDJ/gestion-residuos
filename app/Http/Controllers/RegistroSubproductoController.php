@@ -21,61 +21,81 @@ class RegistroSubproductoController extends Controller
      */
     public function index(Request $request)
     {
-        $tiempo = $request->input('tiempo', 'semanal');
+        // 1. Capturamos el filtro
+        $tiempo = $request->input('tiempo', 'general');
         $institutoId = auth()->user()->instituto_id;
 
+        // 2. Query Base
+        $query = GenSubproducto::where('instituto_id', $institutoId);
+
         switch ($tiempo) {
-            case 'semanal':
-                $registroPeriodo = GenSubproducto::selectRaw(
-                    'YEAR(fecha) as year, 
-                    WEEK(fecha) as semana, 
-                    MIN(fecha) as fecha_inicio, 
-                    MAX(fecha) as fecha_final, 
-                    SUM(valor_kg) as total_kg,
-                    instituto_id'
+            case 'general':
+                // --- VISTA SEMANAL (CORREGIDA) ---
+                $registroPeriodo = $query->select(
+                    DB::raw('MIN(fecha) as fecha_inicio'),
+                    DB::raw('MAX(fecha) as fecha_final'),
+                    DB::raw('SUM(valor_kg) as total_kg'),
+                    'instituto_id',
+                    DB::raw('YEARWEEK(fecha, 1) as semana_id')
                 )
-                    ->where('instituto_id', $institutoId)
-                    ->groupBy('year', 'semana', 'instituto_id')
-                    ->orderBy('year', 'asc')
-                    ->orderBy('semana', 'asc')
-                    ->get();
+                    ->groupBy('instituto_id', 'semana_id')
+                    ->orderBy('fecha_inicio', 'desc')
+                    ->paginate(10);
+
+                // TRUCO DE MAGIA: Forzar fechas de Lunes a Domingo para el Wizard
+                $registroPeriodo->getCollection()->transform(function ($item) {
+                    $item->fecha_inicio = Carbon::parse($item->fecha_inicio)->startOfWeek()->format('Y-m-d');
+                    $item->fecha_final = Carbon::parse($item->fecha_final)->endOfWeek()->format('Y-m-d');
+                    return $item;
+                });
                 break;
 
-            case 'mensual':
-                $registroPeriodo = GenSubproducto::selectRaw(
-                    'YEAR(fecha) as year, 
-                    MONTH(fecha) as mes, 
-                    DATE_FORMAT(MIN(fecha), "%Y-%m-01") as fecha_inicio, 
-                    LAST_DAY(MAX(fecha)) as fecha_final, 
-                    SUM(valor_kg) as total_kg, 
-                    instituto_id'
+            case 'zonas_conteo':
+                // --- VISTA POR ZONA ---
+                $registroPeriodo = $query->select(
+                    DB::raw('MIN(fecha) as fecha_inicio'),
+                    DB::raw('MAX(fecha) as fecha_final'),
+                    DB::raw('SUM(valor_kg) as total_kg'),
+                    'instituto_id',
+                    'zona_id' // Agrupamos por Zona
                 )
-                    ->where('instituto_id', $institutoId)
-                    ->groupBy('year', 'mes', 'instituto_id')
-                    ->orderBy('year', 'asc')
-                    ->orderBy('mes', 'asc')
-                    ->get();
+                    ->with('zona') // Aquí usamos la función que agregaste en el PASO 1
+                    ->groupBy('instituto_id', 'zona_id', DB::raw('YEARWEEK(fecha, 1)'))
+                    ->orderBy('fecha_inicio', 'desc')
+                    ->paginate(10);
                 break;
 
-            case 'anual':
-                $registroPeriodo = GenSubproducto::selectRaw(
-                    'YEAR(fecha) as year, 
-                    DATE_FORMAT(MIN(fecha), "%Y-01-01") as fecha_inicio, 
-                    DATE_FORMAT(MAX(fecha), "%Y-12-31") as fecha_final, 
-                    SUM(valor_kg) as total_kg, 
-                    instituto_id'
+            case 'zonas_areas': // Mantenemos el nombre 'zonas_areas' para no romper tu vista blade
+                // --- VISTA DETALLADA (POR SUBPRODUCTO) ---
+                // Ya que confirmamos que 'Area' no existe, usamos Subproducto
+                $registroPeriodo = $query->select(
+                    DB::raw('MIN(fecha) as fecha_inicio'),
+                    DB::raw('MAX(fecha) as fecha_final'),
+                    DB::raw('SUM(valor_kg) as total_kg'),
+                    'instituto_id',
+                    'zona_id',
+                    'subproducto_id' // Agrupamos por Subproducto
                 )
-                    ->where('instituto_id', $institutoId)
-                    ->groupBy('year', 'instituto_id')
-                    ->orderBy('year', 'asc')
-                    ->get();
+                    ->with(['zona', 'subproducto']) // Usamos las funciones del PASO 1
+                    ->groupBy('instituto_id', 'zona_id', 'subproducto_id', DB::raw('YEARWEEK(fecha, 1)'))
+                    ->orderBy('fecha_inicio', 'desc')
+                    ->paginate(10);
                 break;
 
             default:
-                abort(400, 'Período no válido');
+                $registroPeriodo = $query->paginate(10);
+                break;
+        }
+        $viewName = 'gensubproductos.partials.table-general';
+
+        if ($tiempo == 'zonas_conteo') {
+            $viewName = 'gensubproductos.partials.table-zona';
+        } elseif ($tiempo == 'zonas_areas') {
+            $viewName = 'gensubproductos.partials.table-detalle';
         }
 
-        return view('gensubproductos.index', compact('registroPeriodo'));
+
+        return view('gensubproductos.index', compact('registroPeriodo', 'tiempo', 'viewName'));
     }
 
 
@@ -91,6 +111,31 @@ class RegistroSubproductoController extends Controller
 
         return view('gensubproductos.create', compact('zonas', 'subproductos'));
     }
+
+    // App/Http/Controllers/RegistroSubproductoController.php
+
+    public function checkWeek(Request $request)
+    {
+        // 1. Validar entrada
+        $request->validate([
+            'inicio' => 'required|date',
+            'final' => 'required|date',
+        ]);
+
+        $inicio = \Carbon\Carbon::parse($request->inicio)->format('Y-m-d');
+        $final = \Carbon\Carbon::parse($request->final)->format('Y-m-d');
+        $institutoId = auth()->user()->instituto_id;
+
+        // 2. Verificar si existe AL MENOS UN registro en ese rango
+        $exists = \App\Models\GenSubproducto::where('instituto_id', $institutoId)
+            ->whereBetween('fecha', [$inicio, $final])
+            ->exists();
+
+        // 3. Responder JSON
+        return response()->json(['exists' => $exists]);
+    }
+
+
     /**
      * Store a newly created resource in storage.
      */
@@ -236,84 +281,59 @@ class RegistroSubproductoController extends Controller
      */
     public function updateMultiple(Request $request)
     {
+        // 1. Validaciones básicas
         $request->validate([
+            'inicio' => 'required',
+            'final' => 'required',
             'instituto_id' => 'required|exists:institutos,id',
-            'zonas_areas_id' => 'nullable|exists:zonas_areas,id', // <--- NUEVO
-            'inicio' => 'required|date|before_or_equal:final',
-            'final' => 'required|date|after_or_equal:inicio',
-            'subproducto' => 'required|array',
-            'subproducto.*.valor_kg.*' => 'nullable|numeric|regex:/^\d+(\.\d{1,3})?$/|max:100',
+            'valores' => 'nullable|array' // Aquí es donde vienen tus datos
         ]);
 
-        $instituto_id = $request->input('instituto_id');
-        $zona_id = $request->input('zona_id'); // <--- CAPTURAR ZONA
+        $institutoId = $request->input('instituto_id');
 
-        $inicio = Carbon::createFromFormat('m/d/Y', $request->input('inicio'));
-        $final = Carbon::createFromFormat('m/d/Y', $request->input('final'));
+        // 2. Capturamos el grid de valores. Si viene null, asignamos array vacío.
+        $valores = $request->input('valores') ?? [];
 
-        // ... (Lógica de fechas se mantiene igual) ...
-        $inicio->copy();
-        $inicioSemana = $inicio->dayOfWeek;
-        $inicio = $inicio->subDays($inicioSemana);
+        // 3. Procesamos SOLO si hay datos
+        if (!empty($valores) && is_array($valores)) {
 
-        // ... (Generación del array $dias se mantiene igual) ...
-        $dias = [];
-        $currentDate = $inicio->copy();
-        while ($currentDate->lte($final)) {
-            $dias[] = $currentDate->copy();
-            $currentDate->addDay();
-        }
+            // Estructura: valores[zona_id][subproducto_id][fecha] => valor_kg
+            foreach ($valores as $zonaId => $subproductos) {
 
-        // Iterar y actualizar
-        foreach ($request->input('subproducto') as $subproducto_id => $subproducto) {
-            $valoresKg = $subproducto['valor_kg'];
+                if (!is_array($subproductos)) continue;
 
-            foreach ($dias as $index => $fecha) {
-                $diaKey = 'dia_' . ($index + 1);
-                $valorKg = $valoresKg[$diaKey] ?? null;
-                $fechaCalculada = $fecha;
+                foreach ($subproductos as $subproductoId => $fechas) {
 
-                // BÚSQUEDA DEL REGISTRO EXISTENTE
-                // Aquí agregamos el filtro de zona para no editar el registro de otra área por error
-                $query = GenSubproducto::where('instituto_id', $instituto_id)
-                    ->where('subproducto_id', $subproducto_id)
-                    ->whereDate('fecha', $fechaCalculada->toDateString());
+                    if (!is_array($fechas)) continue;
 
-                if ($zona_id) {
-                    $query->where('zona_id', $zona_id); // Solo busca en esa zona
-                } else {
-                    $query->whereNull('zona_id'); // Busca los que no tienen zona
-                }
+                    foreach ($fechas as $fecha => $valor) {
 
-                $registroExistente = $query->first(); // Ejecutamos la búsqueda
+                        // Limpieza: Si viene vacío o null, lo convertimos a 0
+                        $valor = (isset($valor) && is_numeric($valor)) ? $valor : 0;
 
-                if ($registroExistente) {
-                    if (is_null($valorKg) || $valorKg === '') {
-                        $registroExistente->delete();
-                    } else {
-                        $registroExistente->update([
-                            'valor_kg' => $valorKg,
-                            // No hace falta actualizar zona o instituto, ya coinciden
-                        ]);
-                    }
-                } else {
-                    if (!is_null($valorKg) && $valorKg !== '') {
-                        GenSubproducto::create([
-                            'fecha' => $fecha->toDateString(),
-                            'valor_kg' => $valorKg,
-                            'instituto_id' => $instituto_id,
-                            'subproducto_id' => $subproducto_id,
-                            'zona_id' => $zona_id, // <--- Importante poner la zona al crear
-                        ]);
+                        // UPDATE OR CREATE: Busca por los 4 campos clave. 
+                        // Si existe, actualiza valor_kg. Si no, crea uno nuevo.
+                        GenSubproducto::updateOrCreate(
+                            [
+                                'instituto_id' => $institutoId,
+                                'zona_id' => $zonaId,
+                                'subproducto_id' => $subproductoId,
+                                'fecha' => $fecha,
+                            ],
+                            [
+                                'valor_kg' => $valor
+                            ]
+                        );
                     }
                 }
             }
         }
 
+        // 4. Mensaje de éxito y redirección
         session()->flash('swal', [
             'icon' => 'success',
-            'title' => 'Hecho!',
-            'text' => 'Los datos se han actualizado con éxito',
+            'title' => '¡Hecho!',
+            'text' => 'Los registros se han actualizado correctamente.',
         ]);
 
         return redirect()->route('gensubproductos.index');
@@ -362,47 +382,111 @@ class RegistroSubproductoController extends Controller
 
     public function search(Request $request)
     {
-        $busqueda = $request->input('query');
-        $tiempo = $request->input('tiempo', 'semanal');
+        // 1. Capturamos los datos
+        $termino = $request->input('query');
+        $tiempo = $request->input('tiempo', 'general'); // Por defecto 'general'
         $institutoId = auth()->user()->instituto_id;
 
-        if (empty($busqueda)) {
-            return redirect()->route('gensubproducto.index');
+        // 2. Preparamos la consulta base
+        $query = GenSubproducto::where('instituto_id', $institutoId);
+
+        // 3. Variable por defecto para la vista
+        $viewName = 'gensubproductos.partials.table-general';
+
+        // 4. Lógica idéntica al index, pero agregando el filtro 'where' de búsqueda
+        switch ($tiempo) {
+            case 'general':
+                // --- BÚSQUEDA SEMANAL ---
+                $query->select(
+                    DB::raw('MIN(fecha) as fecha_inicio'),
+                    DB::raw('MAX(fecha) as fecha_final'),
+                    DB::raw('SUM(valor_kg) as total_kg'),
+                    'instituto_id',
+                    DB::raw('YEARWEEK(fecha, 1) as semana_id')
+                )
+                    ->groupBy('instituto_id', 'semana_id')
+                    ->orderBy('fecha_inicio', 'desc');
+
+                // Búsqueda: Por fecha
+                if ($termino) {
+                    $query->where('fecha', 'like', "%{$termino}%");
+                }
+
+                $registroPeriodo = $query->paginate(10);
+
+                // [IMPORTANTE] Corrección para que el botón EDITAR funcione tras buscar
+                $registroPeriodo->getCollection()->transform(function ($item) {
+                    $item->fecha_inicio = Carbon::parse($item->fecha_inicio)->startOfWeek()->format('Y-m-d');
+                    $item->fecha_final = Carbon::parse($item->fecha_final)->endOfWeek()->format('Y-m-d');
+                    return $item;
+                });
+
+                $viewName = 'gensubproductos.partials.table-general';
+                break;
+
+            case 'zonas_conteo':
+                // --- BÚSQUEDA POR ZONA ---
+                $query->select(
+                    DB::raw('MIN(fecha) as fecha_inicio'),
+                    DB::raw('MAX(fecha) as fecha_final'),
+                    DB::raw('SUM(valor_kg) as total_kg'),
+                    'instituto_id',
+                    'zona_id'
+                )
+                    ->with('zona') // Cargar relación para mostrar el nombre
+                    ->groupBy('instituto_id', 'zona_id', DB::raw('YEARWEEK(fecha, 1)'))
+                    ->orderBy('fecha_inicio', 'desc');
+
+                // Búsqueda: Por nombre de Zona
+                if ($termino) {
+                    $query->whereHas('zona', function ($q) use ($termino) {
+                        $q->where('nombre', 'like', "%{$termino}%");
+                    });
+                }
+
+                $registroPeriodo = $query->paginate(10);
+                $viewName = 'gensubproductos.partials.table-zona';
+                break;
+
+            case 'zonas_areas':
+                // --- BÚSQUEDA DETALLADA (SUBPRODUCTO) ---
+                $query->select(
+                    DB::raw('MIN(fecha) as fecha_inicio'),
+                    DB::raw('MAX(fecha) as fecha_final'),
+                    DB::raw('SUM(valor_kg) as total_kg'),
+                    'instituto_id',
+                    'zona_id',
+                    'subproducto_id'
+                )
+                    ->with(['zona', 'subproducto']) // Cargar ambas relaciones
+                    ->groupBy('instituto_id', 'zona_id', 'subproducto_id', DB::raw('YEARWEEK(fecha, 1)'))
+                    ->orderBy('fecha_inicio', 'desc');
+
+                // Búsqueda: Por Zona, Subproducto o Fecha
+                if ($termino) {
+                    $query->where(function ($mainQuery) use ($termino) {
+                        $mainQuery->whereHas('zona', function ($q) use ($termino) {
+                            $q->where('nombre', 'like', "%{$termino}%");
+                        })
+                            ->orWhereHas('subproducto', function ($q) use ($termino) {
+                                $q->where('nombre', 'like', "%{$termino}%");
+                            })
+                            ->orWhere('fecha', 'like', "%{$termino}%");
+                    });
+                }
+
+                $registroPeriodo = $query->paginate(10);
+                $viewName = 'gensubproductos.partials.table-detalle';
+                break;
         }
 
-        // CORRECCIÓN: Usar GenSubproducto, no GenSemanal
-        $query = GenSubproducto::query()->where('instituto_id', $institutoId);
-
-        // Filtramos por nombre del subproducto
-        $query->whereHas('subproducto', function ($q) use ($busqueda) {
-            $q->where('nombre', 'LIKE', "%{$busqueda}%");
-        });
-
-        // Agrupación (Igual que tu index)
-        if ($tiempo === 'mensual') {
-            $registros = $query->selectRaw(
-                'YEAR(fecha) as year, MONTH(fecha) as mes, MIN(fecha) as fecha_inicio, MAX(fecha) as fecha_final, SUM(valor_kg) as total_kg, instituto_id'
-            )
-                ->groupBy('year', 'mes', 'instituto_id')
-                ->orderBy('year', 'desc')->orderBy('mes', 'desc')
-                ->get();
-        } else {
-            $registros = $query->selectRaw(
-                'YEAR(fecha) as year, WEEK(fecha, 1) as semana, MIN(fecha) as fecha_inicio, MAX(fecha) as fecha_final, SUM(valor_kg) as total_kg, instituto_id'
-            )
-                ->groupBy('year', 'semana', 'instituto_id')
-                ->orderBy('year', 'desc')->orderBy('semana', 'desc')
-                ->get();
-        }
-
+        // 5. Si es AJAX (Buscador en tiempo real), devolvemos solo la tabla
         if ($request->ajax()) {
-            $viewName = ($tiempo === 'mensual')
-                ? 'gensubproductos.partials.table_mensual'
-                : 'gensubproductos.partials.table_semanal';
-            return view($viewName, compact('registros'))->render();
+            return view($viewName, ['registroPeriodo' => $registroPeriodo])->render();
         }
 
-        return view('gensubproductos.index', compact('registros', 'tiempo'));
+        // 6. Si no es AJAX (Fallback), devolvemos la vista completa
+        return view('gensubproductos.index', compact('registroPeriodo', 'tiempo', 'viewName'));
     }
 
     public function GenerarPDF(Request $request, $instituto_id, $inicio, $final)
