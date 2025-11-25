@@ -6,6 +6,7 @@ use App\Exports\RegistroSemanalExport;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Models\GenSemanal;
 use App\Models\Zona;
+use App\Models\Categoria;
 use App\Models\Area;
 use App\Models\ZonasAreas;
 use App\Models\Subproducto;
@@ -125,7 +126,7 @@ class RegistroSemanalController extends Controller
         $exists = DB::table('gen_semanals')
             ->join('zonas_areas', 'gen_semanals.zonas_areas_id', '=', 'zonas_areas.id')
             ->join('zonas', 'zonas_areas.zona_id', '=', 'zonas.id')
-            ->where('zonas.instituto_id', $institutoId) 
+            ->where('zonas.instituto_id', $institutoId)
             ->where('gen_semanals.turno', $turno)
             ->whereBetween('gen_semanals.fecha', [$inicio, $final])
             ->exists();
@@ -577,29 +578,49 @@ class RegistroSemanalController extends Controller
 
     public function destroyWeek($fecha)
     {
-        // 1. AUTORIZACIÓN: Revisa el permiso
-        $this->authorize('Eliminar Registros');
+        try {
+            // 1. AUTORIZACIÓN
+            $this->authorize('Eliminar Registros');
 
-        // 2. OBTENER IDs DEL INSTITUTO (PARA BORRADO SEGURO)
-        $institutoId = auth()->user()->instituto_id;
-        $zonasAreasIdsDelInstituto = ZonasAreas::join('zonas', 'zonas_areas.zona_id', '=', 'zonas.id')
-            ->where('zonas.instituto_id', $institutoId)
-            ->pluck('zonas_areas.id');
+            // 2. OBTENER IDs DEL INSTITUTO
+            $institutoId = auth()->user()->instituto_id;
 
-        // 3. CALCULAR EL RANGO DE LA SEMANA
-        // $fecha que recibimos es el Lunes (fecha_inicio)
-        $fechaInicio = Carbon::parse($fecha)->startOfWeek(Carbon::MONDAY)->format('Y-m-d');
-        $fechaFin = Carbon::parse($fecha)->endOfWeek(Carbon::SUNDAY)->format('Y-m-d');
+            // Asegúrate de importar el modelo ZonasAreas arriba: use App\Models\ZonasAreas;
+            $zonasAreasIdsDelInstituto = ZonasAreas::join('zonas', 'zonas_areas.zona_id', '=', 'zonas.id')
+                ->where('zonas.instituto_id', $institutoId)
+                ->pluck('zonas_areas.id');
 
-        // 4. LÓGICA DE BORRADO (CORREGIDA)
-        // Borra todos los registros DENTRO de esa semana,
-        // que pertenezcan a las zonas de ESE instituto.
-        GenSemanal::whereIn('zonas_areas_id', $zonasAreasIdsDelInstituto)
-            ->whereBetween('fecha', [$fechaInicio, $fechaFin])
-            ->delete();
+            // 3. CALCULAR EL RANGO DE LA SEMANA
+            $fechaInicio = Carbon::parse($fecha)->startOfWeek(Carbon::MONDAY)->format('Y-m-d');
+            $fechaFin = Carbon::parse($fecha)->endOfWeek(Carbon::SUNDAY)->format('Y-m-d');
 
-        // 5. REDIRECCIÓN:
-        return redirect()->route('gensemanal.index')->with('success', 'Semana eliminada correctamente.');
+            // 4. LÓGICA DE BORRADO
+            // Guardamos en $borrados la cantidad de registros eliminados
+            $borrados = GenSemanal::whereIn('zonas_areas_id', $zonasAreasIdsDelInstituto)
+                ->whereBetween('fecha', [$fechaInicio, $fechaFin])
+                ->delete();
+
+            // 5. REDIRECCIÓN CON ALERTAS
+            if ($borrados > 0) {
+                return redirect()->route('gensemanal.index')->with('swal', [
+                    'icon' => 'success',
+                    'title' => 'Eliminado',
+                    'text' => 'La semana de generación ha sido eliminada correctamente.'
+                ]);
+            } else {
+                return redirect()->route('gensemanal.index')->with('swal', [
+                    'icon' => 'info',
+                    'title' => 'Info',
+                    'text' => 'No se encontraron registros para eliminar en esa semana.'
+                ]);
+            }
+        } catch (\Exception $e) {
+            return redirect()->route('gensemanal.index')->with('swal', [
+                'icon' => 'error',
+                'title' => 'Error',
+                'text' => 'No se pudo eliminar la semana: ' . $e->getMessage()
+            ]);
+        }
     }
 
     /**
@@ -616,21 +637,28 @@ class RegistroSemanalController extends Controller
             return redirect()->back();
         }
 
-        // 1. CALCULAR LA SEMANA COMPLETA
+        // ************************************************
+        // 1. OBTENER EL TURNO DESDE LA PETICIÓN
+        // Asumimos que el turno se envía en un campo llamado 'turno' en el formulario.
+        // Usamos 'N/A' como valor por defecto si no se encuentra, pero te sugiero 
+        // usar el turno más común si no se especifica.
+        $turnoSemana = $request->input('turno', 'Matutino');
+        // ************************************************
+
+        // 2. CALCULAR LA SEMANA COMPLETA
         $fechaCarbon = Carbon::createFromFormat('Y-m-d', $fecha);
         $fechaInicioSemana = $fechaCarbon->startOfWeek(Carbon::MONDAY)->format('Y-m-d');
         $fechaFinSemana = $fechaCarbon->endOfWeek(Carbon::SUNDAY)->format('Y-m-d');
 
-        // 2. OBTENER LA ESTRUCTURA (Zonas -> Areas -> Subproductos para filtrar)
+        // 3. OBTENER LA ESTRUCTURA (Zonas -> Areas -> Subproductos para filtrar)
         $zonas = Zona::where('instituto_id', $instituto->id)
             ->orderBy('nombre')
-            // Mantenemos 'subproductos' porque tu vista lo usa para saber qué mostrar
-            ->with(['areas.subproductos' => function ($query) {
-                $query->orderBy('subproductos.nombre');
+            ->with(['areas' => function ($query) {
+                $query->orderBy('nombre');
             }])
             ->get();
 
-        // 3. OBTENER LOS DATOS DE TODA LA SEMANA
+        // 4. OBTENER LOS DATOS DE TODA LA SEMANA
         $datosSemana = GenSemanal::whereBetween('fecha', [$fechaInicioSemana, $fechaFinSemana])
             ->join('zonas_areas', 'gen_semanals.zonas_areas_id', '=', 'zonas_areas.id')
             ->join('zonas', 'zonas_areas.zona_id', '=', 'zonas.id')
@@ -640,42 +668,71 @@ class RegistroSemanalController extends Controller
                 'gen_semanals.turno',
                 'gen_semanals.kilos',
                 'zonas_areas.area_id',
-                'gen_semanals.categoria_id', // <--- Dato correcto
+                'gen_semanals.categoria_id',
                 'zonas.id as zona_id',
                 'zonas.nombre as zona_nombre'
             )
             ->orderBy('fecha')
             ->get();
 
-        // 4. TRANSFORMAR LOS DATOS PARA LA VISTA
+        // 5. TRANSFORMAR LOS DATOS PARA LA VISTA Y CALCULAR TOTALES INTERMEDIOS
         $lookupDataSemanal = [];
         $totalPorZonaSemana = [];
         $totalGeneradoSemana = 0;
+        $totalPorAreaDia = []; // [fecha][area_id] => kilos
+        $totalPorZonaDia = []; // [fecha][zona_id] => kilos
 
         foreach ($datosSemana as $registro) {
             $fechaRegistro = $registro->fecha;
+            $areaId = $registro->area_id;
+            $zonaId = $registro->zona_id;
 
-            // Inicializar arrays si no existen
+            // --- 5.1. Almacenamiento de datos (para mostrar en la tabla) ---
+            // Estructura: [fecha][zona_id][area_id][categoria_id] = [kilos, turno]
             if (!isset($lookupDataSemanal[$fechaRegistro])) {
                 $lookupDataSemanal[$fechaRegistro] = [];
             }
-            if (!isset($lookupDataSemanal[$fechaRegistro][$registro->area_id])) {
-                $lookupDataSemanal[$fechaRegistro][$registro->area_id] = [];
+            if (!isset($lookupDataSemanal[$fechaRegistro][$zonaId])) {
+                $lookupDataSemanal[$fechaRegistro][$zonaId] = [];
+            }
+            if (!isset($lookupDataSemanal[$fechaRegistro][$zonaId][$areaId])) {
+                $lookupDataSemanal[$fechaRegistro][$zonaId][$areaId] = [];
             }
 
-            // --- CORRECCIÓN AQUÍ ---
-            // Usamos categoria_id porque eso es lo que trae el SELECT
-            $lookupDataSemanal[$fechaRegistro][$registro->area_id][$registro->categoria_id] = $registro->kilos;
+            $lookupDataSemanal[$fechaRegistro][$zonaId][$areaId][$registro->categoria_id] = [
+                'kilos' => $registro->kilos,
+                'turno' => $registro->turno
+            ];
 
-            // Sumas
+            // --- 5.2. Cálculos de Totales ---
             $totalGeneradoSemana += $registro->kilos;
+
+            // Subtotal semanal por Zona (para el resumen)
             if (!isset($totalPorZonaSemana[$registro->zona_nombre])) {
                 $totalPorZonaSemana[$registro->zona_nombre] = 0;
             }
             $totalPorZonaSemana[$registro->zona_nombre] += $registro->kilos;
+
+            // Subtotal por Área y Día
+            if (!isset($totalPorAreaDia[$fechaRegistro])) {
+                $totalPorAreaDia[$fechaRegistro] = [];
+            }
+            if (!isset($totalPorAreaDia[$fechaRegistro][$areaId])) {
+                $totalPorAreaDia[$fechaRegistro][$areaId] = 0;
+            }
+            $totalPorAreaDia[$fechaRegistro][$areaId] += $registro->kilos;
+
+            // Subtotal por Zona y Día
+            if (!isset($totalPorZonaDia[$fechaRegistro])) {
+                $totalPorZonaDia[$fechaRegistro] = [];
+            }
+            if (!isset($totalPorZonaDia[$fechaRegistro][$zonaId])) {
+                $totalPorZonaDia[$fechaRegistro][$zonaId] = 0;
+            }
+            $totalPorZonaDia[$fechaRegistro][$zonaId] += $registro->kilos;
         }
 
-        // 5. CALCULAR ZONA CON MAYOR GENERACIÓN
+        // 6. CALCULAR ZONA CON MAYOR GENERACIÓN
         $zonaMayorNombreSemana = 'N/A';
         $zonaMayorTotalSemana = 0;
         if (!empty($totalPorZonaSemana)) {
@@ -684,16 +741,16 @@ class RegistroSemanalController extends Controller
             $zonaMayorTotalSemana = current($totalPorZonaSemana);
         }
 
-        // 6. Formatear fechas para mostrar
+        // 7. Formatear fechas para mostrar
         $fechaInicioFormateada = Carbon::parse($fechaInicioSemana)->format('d/m/Y');
         $fechaFinFormateada = Carbon::parse($fechaFinSemana)->format('d/m/Y');
 
-
-        // 7. PREPARAR LOS DATOS PARA EL PDF
+        // 8. PREPARAR LOS DATOS PARA EL PDF
         $data = [
             'instituto' => $instituto,
-            'zonas' => $zonas,
-            'lookupDataSemanal' => $lookupDataSemanal,
+            'zonas' => $zonas, // Estructura maestra
+            'categorias' => Categoria::all()->pluck('nombre', 'id')->toArray(), // Nombres de Categorías
+            'lookupDataSemanal' => $lookupDataSemanal, // Datos detallados
             'fechaInicioFormateada' => $fechaInicioFormateada,
             'fechaFinFormateada' => $fechaFinFormateada,
             'fechaInicioSemana' => $fechaInicioSemana,
@@ -701,13 +758,17 @@ class RegistroSemanalController extends Controller
             'totalGeneradoSemana' => $totalGeneradoSemana,
             'zonaMayorNombreSemana' => $zonaMayorNombreSemana,
             'zonaMayorTotalSemana' => $zonaMayorTotalSemana,
-            'datosSemana' => $datosSemana,
+            // NUEVAS VARIABLES
+            'totalPorAreaDia' => $totalPorAreaDia,
+            'totalPorZonaDia' => $totalPorZonaDia,
+            'turnoSemana' => $turnoSemana, // <--- VARIABLE AGREGADA Y NECESARIA
         ];
 
-        // 8. GENERAR Y DEVOLVER EL PDF
+        // 9. GENERAR Y DEVOLVER EL PDF
         $pdf = Pdf::loadView('gensemanal.pdf-template', $data);
 
         // Opcional: Orientación
+        // Si la orientación horizontal es necesaria, descomenta esta línea:
         // $pdf->setPaper('a4', 'landscape');
 
         $fileName = 'Reporte_Semanal_' . $instituto->nombre_corto . '_' . $fechaInicioSemana . '.pdf';

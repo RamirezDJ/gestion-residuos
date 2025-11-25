@@ -180,14 +180,15 @@
             <h2 class="section-title">Desglose de Datos por Día y Subproducto</h2>
 
             @php
-                // Fechas manuales para evitar problemas de zona horaria
                 $fechaActual = \Carbon\Carbon::parse($fechaInicioSemana)->startOfDay();
-                $fechaFin = \Carbon\Carbon::parse($fechaFinSemana)->endOfDay();
+                // Usamos solo el formato de fecha para la comparación del salto de página
+                $fechaFinString = \Carbon\Carbon::parse($fechaFinSemana)->format('Y-m-d');
             @endphp
 
-            @while ($fechaActual->lte($fechaFin))
+            @while ($fechaActual->lte(\Carbon\Carbon::parse($fechaFinSemana)))
                 @php
                     $fechaIter = $fechaActual->format('Y-m-d');
+                    // Datos estructurados: [zona_id][area_id][categoria_id] => ['kilos', 'turno']
                     $datosDelDia = $lookupDataSemanal[$fechaIter] ?? [];
                 @endphp
 
@@ -201,14 +202,30 @@
                         </tr>
                     </thead>
                     <tbody>
+
+                        {{-- BUCLE DE ZONAS --}}
                         @foreach ($zonas as $zona)
+                            @php
+                                $zonaId = $zona->id;
+                                $zonaData = $datosDelDia[$zonaId] ?? [];
+                                $totalZonaDia = $totalPorZonaDia[$fechaIter][$zonaId] ?? 0;
+                            @endphp
+
+                            {{-- Título de Zona --}}
                             <tr>
                                 <td colspan="3" class="zona-header">
                                     Zona: {{ $zona->nombre }}
                                 </td>
                             </tr>
 
+                            {{-- BUCLE DE ÁREAS --}}
                             @foreach ($zona->areas as $area)
+                                @php
+                                    $areaId = $area->id;
+                                    $areaData = $zonaData[$areaId] ?? [];
+                                @endphp
+
+                                {{-- Título de Área: Se revierte al nombre dinámico --}}
                                 <tr>
                                     <td colspan="3" class="area-header">
                                         Área: {{ $area->nombre }}
@@ -216,58 +233,55 @@
                                 </tr>
                                 <tr>
                                     <td style="padding-left: 30px; font-weight: bold;">Categoría</td>
-                                    <td style="font-weight: bold;">Kilos (kg)</td>
-                                    <td style="font-weight: bold;">Turno(s)</td>
+                                    <td style="font-weight: bold; text-align: center;">Kilos (kg)</td>
+                                    <td style="font-weight: bold; text-align: center;">Turno(s)</td>
                                 </tr>
 
                                 @php
-                                    // FILTRADO: Obtenemos las categorías de esta área
                                     $categoriasDelArea = $area->subproductos
                                         ->pluck('categoria')
                                         ->unique('id')
                                         ->sortBy('nombre');
                                 @endphp
 
+                                {{-- BUCLE DE CATEGORÍAS (Se imprime siempre, incluyendo 0 kg) --}}
                                 @foreach ($categoriasDelArea as $categoria)
-                                    @if ($categoria)
-                                        @php
-                                            // Buscamos los kilos (o 0 si no hay)
-                                            $kilos = $datosDelDia[$area->id][$categoria->id] ?? 0;
+                                    @php
+                                        $registro = $areaData[$categoria->id] ?? null;
+                                        $kilos = $registro['kilos'] ?? 0;
 
-                                            // LÓGICA DE TURNO:
-                                            // 1. Intentamos buscar turnos específicos para este registro
-                                            $turnosEncontrados = $datosSemana
-                                                ->where('fecha', $fechaIter)
-                                                ->where('area_id', $area->id)
-                                                ->where('categoria_id', $categoria->id)
-                                                ->pluck('turno')
-                                                ->unique();
+                                        // Lógica para el turno (usa $turnoSemana si $kilos es 0)
+                                        $turnoAMostrar = $kilos > 0 ? $registro['turno'] ?? '-' : $turnoSemana ?? '-';
+                                    @endphp
 
-                                            // 2. Si encontramos turnos, los unimos. Si no, usamos el default de la semana
-                                            $turnoAMostrar = $turnosEncontrados->isNotEmpty()
-                                                ? $turnosEncontrados->implode(', ')
-                                                : $turnoSemana ?? '-';
-                                        @endphp
+                                    <tr class="subproducto-row">
+                                        <td>{{ $categoria->nombre }}</td>
 
-                                        <tr class="subproducto-row">
-                                            <td>{{ $categoria->nombre }}</td>
+                                        <td class="{{ $kilos == 0 ? 'zero-value' : '' }}" style="text-align: center;">
+                                            {{ number_format($kilos, 2) }} kg
+                                        </td>
 
-                                            <td class="{{ $kilos == 0 ? 'zero-value' : '' }}">
-                                                {{ number_format($kilos, 2) }} kg
-                                            </td>
-
-                                            <td>
-                                                {{ $turnoAMostrar }}
-                                            </td>
-                                        </tr>
-                                    @endif
+                                        {{-- Aplicar la clase 'zero-value' al turno si los kilos son 0 --}}
+                                        <td class="{{ $kilos == 0 ? 'zero-value' : '' }}" style="text-align: center;">
+                                            {{ $turnoAMostrar }}
+                                        </td>
+                                    </tr>
                                 @endforeach
-                            @endforeach
-                        @endforeach
+                            @endforeach {{-- Fin foreach Area --}}
+
+                            {{-- FILA DE TOTAL POR ZONA --}}
+                            <tr>
+                                <td colspan="3" class="zona-header" style="text-align: right; padding-right: 10pt;">
+                                    TOTAL {{ $zona->nombre }}: {{ number_format($totalZonaDia, 2) }} kg
+                                </td>
+                            </tr>
+                        @endforeach {{-- Fin foreach Zona --}}
+
                     </tbody>
                 </table>
 
-                @if ($fechaActual->lt($fechaFin))
+                {{-- CORRECCIÓN DEL SALTO DE PÁGINA: Solo se añade si no estamos en el último día --}}
+                @if ($fechaActual->format('Y-m-d') !== $fechaFinString)
                     <div class="page-break"></div>
                 @endif
 

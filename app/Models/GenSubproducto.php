@@ -14,7 +14,8 @@ class GenSubproducto extends Model
         'fecha',
         'valor_kg',
         'instituto_id',
-        'subproducto_id'
+        'subproducto_id',
+        'zona_id',
     ];
 
     // Relacion uno a muchos inversa a nivel de eloquent

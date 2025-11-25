@@ -6,7 +6,7 @@
     <title>Gestión de Residuos - Reporte</title>
 
     <style>
-        /* --- ESTILOS DEL TEMPLATE --- */
+        /* --- ESTILOS DEL TEMPLATE (Sin modificar) --- */
         @page {
             margin: 1cm;
         }
@@ -131,6 +131,10 @@
         .page-break {
             page-break-after: always;
         }
+
+        .zero-value {
+            color: #999;
+        }
     </style>
 </head>
 
@@ -163,7 +167,8 @@
                     <td class="data-label">Total generado de subproductos:</td>
                     <td class="highlight">
                         @php
-                            $totalGenerado = $datosAgrupados->flatten(2)->sum('valor_kg');
+                            // CORRECCIÓN: Usamos la colección de datos crudos para la suma
+                            $totalGenerado = $datosRegistrados->sum('valor_kg');
                         @endphp
                         {{ number_format($totalGenerado, 2) }} kg
                     </td>
@@ -172,13 +177,13 @@
                     <td class="data-label">Subproducto con mayor generación:</td>
                     <td class="highlight">
                         @php
-                            $subproductoMayor = $datosAgrupados
-                                ->flatten(2)
-                                ->groupBy('subproducto_nombre')
-                                ->map(function ($rows, $nombre) {
+                            // CORRECCIÓN: Agrupamos los datos crudos por subproducto para encontrar el mayor.
+                            $subproductoMayor = $datosRegistrados
+                                ->groupBy('subproducto_id')
+                                ->map(function ($rows) {
                                     return [
-                                        'nombre' => $nombre,
-                                        'total' => $rows->sum('total_kg'),
+                                        'nombre' => $rows->first()->subproducto->nombre ?? 'N/A',
+                                        'total' => $rows->sum('valor_kg'), // Suma del valor_kg
                                     ];
                                 })
                                 ->sortByDesc('total')
@@ -193,67 +198,113 @@
         {{-- Salto de página antes del desglose --}}
         <div class="page-break"></div>
 
-        {{-- SECCIÓN 2: DESGLOSE --}}
+        {{-- SECCIÓN 2: DESGLOSE (Lógica Modificada para incluir vacíos y ceros) --}}
         <div class="section">
             <h2 class="section-title">Desglose de Datos por Zona y Subproducto</h2>
 
-            @foreach ($datosAgrupados as $zonaNombre => $subproductos)
-                {{-- Título de ZONA --}}
+            @php
+                // --- PREPARACIÓN DE DATOS ÚNICA PARA EL RANGO COMPLETO ---
+                // Generar la lista completa de fechas en el rango
+                $fechaIterador = \Carbon\Carbon::parse($inicio);
+                $fechaFin = \Carbon\Carbon::parse($final);
+                $rangoFechas = [];
+                while ($fechaIterador->lte($fechaFin)) {
+                    $rangoFechas[] = $fechaIterador->format('Y-m-d');
+                    $fechaIterador->addDay();
+                }
+                // Si el rango es vacío (ej. $inicio > $final), esta lista estará vacía.
+            @endphp
+
+
+            @foreach ($zonas as $zona)
                 <div class="zona-block-title">
-                    Zona: {{ $zonaNombre }}
+                    Zona: {{ $zona->nombre }}
                 </div>
 
-                {{-- Bucle de Subproductos de esa zona --}}
-                @foreach ($subproductos as $subproductoNombre => $datos)
-                    <table class="data-table">
+                @foreach ($subproductos as $subproducto)
+                    @php
+                        // 1. Filtrar y mapear los datos existentes por fecha para acceso rápido
+                        $datosMapeados = $datosRegistrados
+                            ->where('zona_id', $zona->id)
+                            ->where('subproducto_id', $subproducto->id)
+                            ->keyBy(function ($item) {
+                                return \Carbon\Carbon::parse($item->fecha)->format('Y-m-d');
+                            });
+
+                        // 2. Construir los arrays de fechas y cantidades completos para todo el rango
+                        $fechasCompletas = [];
+                        $cantidadesCompletas = [];
+
+                        foreach ($rangoFechas as $fechaStr) {
+                            // Si no existe un registro para esa fecha, $kilos será 0
+                            $data = $datosMapeados->get($fechaStr);
+                            $kilos = $data->valor_kg ?? 0;
+
+                            $fechasCompletas[] = $fechaStr;
+                            $cantidadesCompletas[] = $kilos;
+                        }
+
+                        // 3. Dividir los datos completos en chunks de 7 (para las filas de la tabla)
+                        $fechaChunks = array_chunk($fechasCompletas, 7);
+                        $cantidadChunks = array_chunk($cantidadesCompletas, 7);
+
+                    @endphp
+
+                    <table class="data-table" style="page-break-inside: auto;">
                         <thead>
                             <tr>
-                                <th colspan="7" class="main-header">{{ $subproductoNombre }}</th>
+                                <th colspan="8" class="main-header">{{ $subproducto->nombre }}</th>
                             </tr>
                         </thead>
                         <tbody>
-                            @php
-                                $fechaChunks = array_chunk($datos->pluck('fecha')->toArray(), 6);
-                                $cantidadChunks = array_chunk($datos->pluck('valor_kg')->toArray(), 6);
-                            @endphp
-
+                            {{-- Ya no se necesita el @if ($tieneRegistros), siempre iteramos sobre los chunks --}}
                             @foreach ($fechaChunks as $index => $fechaChunk)
                                 <tr>
-                                    <td class="data-label" style="width: 15%;">Fecha:</td>
+                                    {{-- Fila de Fechas --}}
+                                    <td class="data-label" style="width: 10%;">Fecha:</td>
                                     @foreach ($fechaChunk as $fecha)
                                         <td style="text-align: center;">
                                             {{ \Carbon\Carbon::parse($fecha)->format('d/m/Y') }}
                                         </td>
                                     @endforeach
-                                    {{-- Rellenar vacíos --}}
-                                    @foreach (array_pad($fechaChunk, 6, '') as $fecha)
-                                        @if ($fecha === '')
-                                            <td>&nbsp;</td>
-                                        @endif
-                                    @endforeach
+                                    {{-- Rellenar el resto de la fila con espacios si no es múltiplo de 7 --}}
+                                    @for ($i = count($fechaChunk); $i < 7; $i++)
+                                        <td style="text-align: center;">&nbsp;</td>
+                                    @endfor
                                 </tr>
                                 <tr>
-                                    <td class="data-label">Cantidad:</td>
+                                    {{-- Fila de Cantidades --}}
+                                    <td class="data-label" style="width: 10%;">Cantidad (kg):</td>
                                     @foreach ($cantidadChunks[$index] as $cantidad)
-                                        <td style="text-align: center;">{{ $cantidad }}</td>
+                                        @php
+                                            $isZero = $cantidad == 0;
+                                        @endphp
+                                        <td class="{{ $isZero ? 'zero-value' : '' }}" style="text-align: center;">
+                                            {{ number_format($cantidad, 2) }}
+                                        </td>
                                     @endforeach
-                                    {{-- Rellenar vacíos --}}
-                                    @foreach (array_pad($cantidadChunks[$index], 6, '') as $cantidad)
-                                        @if ($cantidad === '')
-                                            <td>&nbsp;</td>
-                                        @endif
-                                    @endforeach
+                                    {{-- Rellenar con 0.00 y gris si no es múltiplo de 7 (para mantener el formato de 8 columnas) --}}
+                                    @for ($i = count($cantidadChunks[$index]); $i < 7; $i++)
+                                        <td class="zero-value" style="text-align: center;">{{ number_format(0, 2) }}
+                                        </td>
+                                    @endfor
                                 </tr>
                             @endforeach
+
+                            {{-- Si el rango de fechas estaba completamente vacío (ej. $inicio > $final), mostramos un mensaje por seguridad --}}
+                            @if (empty($fechaChunks))
+                                <tr>
+                                    <td colspan="8" class="zero-value"
+                                        style="text-align: center; font-style: italic;">
+                                        Rango de fechas inválido o sin datos en el periodo.
+                                    </td>
+                                </tr>
+                            @endif
                         </tbody>
                     </table>
-
-                    {{-- Espacio entre tablas (opcional) --}}
                     <div style="margin-bottom: 15pt;"></div>
                 @endforeach
 
-                {{-- LÓGICA DE SALTO DE PÁGINA POR ZONA --}}
-                {{-- "Si NO es la última zona, haz un salto de página" --}}
                 @if (!$loop->last)
                     <div class="page-break"></div>
                 @endif
