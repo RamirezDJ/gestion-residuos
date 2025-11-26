@@ -63,12 +63,12 @@
                 <div class="mt-4">
                     @if ($excedeMeta)
                         <div class="p-4 text-sm text-red-500 rounded-lg bg-red-100 dark:text-blue-400" role="alert">
-                            <span class="font-medium">Alerta!</span> ⚠️ ¡Se ha superado la meta anual!
+                            <span class="font-medium">Cumplimiento de Meta:</span> ⚠️ ¡Se ha superado la meta anual!
                         </div>
                     @else
                         <div class="p-4 text-sm text-green-500 rounded-lg bg-green-100 dark:text-blue-400"
                             role="alert">
-                            <span class="font-medium">Alerta!</span> ✅ Dentro del límite permitido.
+                            <span class="font-medium">Cumplimiento de Meta:</span> ✅ Dentro del límite permitido.
                         </div>
                     @endif
                 </div>

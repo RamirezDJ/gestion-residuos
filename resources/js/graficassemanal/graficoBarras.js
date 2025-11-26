@@ -37,10 +37,13 @@ document.addEventListener('DOMContentLoaded', function () {
 			series: [
 				{
 					name: 'Total',
-					data: data.map(item => ({
-						x: item.nombre,
-						y: parseFloat(parseFloat(item.total_kg).toFixed(3))
-					}))
+					data: data.map(item => {
+						const totalKgNumerico = parseFloat(item.total_kg) || 0;
+						return {
+							x: item.nombre,
+							y: parseFloat(totalKgNumerico.toFixed(3))
+						}
+					})
 				}
 			],
 			chart: {

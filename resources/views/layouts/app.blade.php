@@ -54,6 +54,14 @@
 
     @livewireScripts
 
+    <div class="hidden">
+        <span class="bg-slate-900 hover:bg-slate-800 text-white"></span>
+        <span class="bg-blue-600 hover:bg-blue-700 text-white"></span>
+
+        <span class="bg-yellow-400 bg-green-500"></span>
+
+        <span class="py-3 px-8 py-2 px-8"></span>
+    </div>
     @if (session('swal'))
         <script>
             Swal.fire(@json(session('swal')))
