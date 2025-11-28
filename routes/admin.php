@@ -34,7 +34,7 @@ Route::resource('/subproductos', SubprodcutosController::class)
     ->middleware(['can:Acceso a Subproductos']);
 
 Route::resource('categorias', CategoriaController::class)
-    ->middleware(['can:Gestion de Categorias']);
+    ->middleware(['can:Acceso a Categorías']);
 
 Route::resource('/roles', RoleController::class)
     ->except('show')->middleware(['can:Gestion de Roles']);

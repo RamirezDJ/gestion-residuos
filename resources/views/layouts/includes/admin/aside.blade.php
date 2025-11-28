@@ -28,10 +28,10 @@
             ],
             [
                 'name' => 'Categorías',
-                'url' => route('admin.categorias.index'), // O route('admin.categorias.index') si lo nombraste con prefijo 'admin.'
-                'active' => request()->routeIs('categorias.*'), // O 'admin.categorias.*'
-                'icon' => 'fa-solid fa-tags', // Usando un icono de Font Awesome 6, similar a 'fas fa-tags'
-                'can' => ['Gestion de Categorias'], // <--- ¡IMPORTANTE! Reemplaza con el permiso que definiste.
+                'url' => route('admin.categorias.index'),
+                'active' => request()->routeIs('admin.categorias.*'), 
+                'icon' => 'fa-solid fa-tags',
+                'can' => ['Acceso a Categorías'],
             ],
             [
                 'name' => 'Roles',

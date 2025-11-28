@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\GenSemanal;
 use App\Models\Institutos;
+use App\Models\RegistroPerCapita;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -59,5 +60,85 @@ class MetaAnualController extends Controller
             'excedeMeta',
             'registroConMayorGeneracion'
         ));
+    }
+
+    /**
+     * Muestra la vista de índice para el detalle de Generación Per Cápita.
+     */
+    public function perCapitaIndex()
+    {
+        $institutoId = auth()->user()->instituto_id;
+
+        // 1. Consultar los registros guardados en la tabla nueva
+        $registrosPerCapita = RegistroPerCapita::where('instituto_id', $institutoId)
+            ->orderBy('fecha', 'desc') // Los más recientes primero
+            ->paginate(10);
+
+        // 2. Calcular el promedio general histórico (Opcional, para la tarjeta de resumen)
+        $promedioHistorico = RegistroPerCapita::where('instituto_id', $institutoId)->avg('per_capita');
+
+        // 3. Enviar los datos a la vista
+        return view('metaAnual.perCapita.index', compact('registrosPerCapita', 'promedioHistorico'));
+    }
+
+    public function perCapitaCreate()
+    {
+        return view('metaAnual.perCapita.create');
+    }
+
+    /**
+     * Guarda el nuevo registro per cápita en la base de datos.
+     */
+    public function perCapitaStore(Request $request)
+    {
+        $institutoId = auth()->user()->instituto_id;
+
+        // --- 1. VERIFICACIÓN DE DUPLICADOS (NUEVO) ---
+        // Comprobamos si ya existe un registro con la misma fecha para este instituto
+        $existeRegistro = RegistroPerCapita::where('instituto_id', $institutoId)
+            ->where('fecha', $request->fecha)
+            ->exists();
+
+        if ($existeRegistro) {
+            // Si ya existe, regresamos atrás mostrando un error en el campo 'fecha'
+            // y devolviendo los datos (withInput) para que no tenga que escribirlos de nuevo.
+            return back()
+                ->withInput()
+                ->withErrors([
+                    'fecha' => 'Ya existe un reporte registrado para esta fecha (' . \Carbon\Carbon::parse($request->fecha)->format('d/m/Y') . '). Por favor elige otra o edita el existente.'
+                ]);
+        }
+
+        // --- 2. VALIDACIÓN DE DATOS ---
+        $request->validate([
+            'fecha' => 'required|date',
+            'visitantes' => 'required|integer|min:0',
+            'trabajadores' => 'required|integer|min:0',
+            'kilos' => 'required|numeric|min:0',
+        ]);
+
+        // --- 3. CÁLCULO ---
+        $totalPersonas = $request->visitantes + $request->trabajadores;
+
+        // Evitar división por cero
+        $perCapita = $totalPersonas > 0 ? ($request->kilos / $totalPersonas) : 0;
+
+        // --- 4. GUARDADO ---
+        RegistroPerCapita::create([
+            'instituto_id' => $institutoId,
+            'fecha' => $request->fecha,
+            'visitantes' => $request->visitantes,
+            'trabajadores' => $request->trabajadores,
+            'kilos_residuos' => $request->kilos,
+            'per_capita' => $perCapita,
+        ]);
+
+        // --- 5. REDIRECCIÓN ---
+        return redirect()->route('metaAnual.percapita.index')
+            ->with('swal', [
+                'icon' => 'success',
+                'title' => '¡Registrado!',
+                'text' => 'El registro diario se ha guardado correctamente.'
+            ]);
     }
 }

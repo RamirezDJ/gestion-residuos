@@ -5,6 +5,7 @@ use App\Http\Controllers\GraficasSemanalController;
 use App\Http\Controllers\GraficasSubproductosController;
 use App\Http\Controllers\ImageController;
 use App\Http\Controllers\MetaAnualController;
+use App\Http\Controllers\ReporteDiarioController;
 use App\Http\Controllers\PrediccionesZonasController;
 use App\Http\Controllers\RegistroSemanalController;
 use App\Http\Controllers\RegistroSubproductoController;
@@ -58,8 +59,14 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
     Route::resource('/evidenciasGenerado',  ImageController::class)
         ->middleware(['can:Acceso a Evidencias de Generación']);
 
-    Route::get('/metaAnual', [MetaAnualController::class, 'index'])->name('metaAnual.index')
-        ->middleware(['can:Acceso a Meta Anual']);;
+    Route::get('/metaAnual', [MetaAnualController::class, 'index'])->name('metaAnual.index')->middleware(['can:Acceso a Meta Anual']);;
+    Route::get('/metaAnual/percapita', [MetaAnualController::class, 'perCapitaIndex'])->name('metaAnual.percapita.index')->middleware(['can:Acceso a Meta Anual']);
+    Route::get('/metaAnual/percapita/create', [MetaAnualController::class, 'perCapitaCreate'])->name('metaAnual.percapita.create')->middleware(['can:Acceso a Meta Anual']);
+    Route::post('/metaAnual/percapita', [MetaAnualController::class, 'perCapitaStore'])->name('metaAnual.percapita.store')->middleware(['can:Acceso a Meta Anual']);
+    Route::post('/metaAnual/percapita', [MetaAnualController::class, 'perCapitaStore'])->name('metaAnual.percapita.store')->middleware(['can:Acceso a Meta Anual']);
+
+    Route::get('/reporteDiario', [ReporteDiarioController::class, 'index'])->name('reporteDiario.index')->middleware(['can:Acceso a Inicio']);
+    Route::post('/reporteDiario/generar', [ReporteDiarioController::class, 'generarReporte'])->name('reporteDiario.generar')->middleware(['can:Acceso a Inicio']);
 
     Route::get('/prediccionesZonas/obtenerPredicciones', [PrediccionesZonasController::class, 'obtenerPredicciones']);
     // Route::get('/prediccionesZonas/obtenerTodasLasPredicciones', [PrediccionesZonasController::class, 'obtenerTodasLasPredicciones']);
