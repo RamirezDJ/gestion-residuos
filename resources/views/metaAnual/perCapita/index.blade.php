@@ -96,6 +96,22 @@
                         </div>
                     </div>
 
+                    {{-- Tarjetas Informativas (Resumen rápido) --}}
+                    <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 mb-8">
+                        <!-- Meta Actual Card (Solo lectura en esta vista) -->
+                        <div class="bg-gray-50 rounded-lg border border-gray-200 p-4">
+                            <div class="flex items-center justify-between">
+                                <h3 class="text-md font-medium text-gray-600">Promedio General</h3>
+                                <i class="fas fa-chart-line text-blue-400"></i>
+                            </div>
+                            <div class="mt-2">
+                                <p class="text-2xl font-bold text-gray-800">
+                                    {{ number_format($promedioPercapitaDiario ?? 0, 3) }} <span
+                                        class="text-sm font-normal text-gray-500">kg/p/día</span>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
 
                 </div>
             </div>

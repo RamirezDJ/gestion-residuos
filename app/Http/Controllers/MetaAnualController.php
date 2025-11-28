@@ -69,16 +69,21 @@ class MetaAnualController extends Controller
     {
         $institutoId = auth()->user()->instituto_id;
 
-        // 1. Consultar los registros guardados en la tabla nueva
+        // 1. Consultar los registros (para la tabla)
         $registrosPerCapita = RegistroPerCapita::where('instituto_id', $institutoId)
-            ->orderBy('fecha', 'desc') // Los más recientes primero
+            ->orderBy('fecha', 'desc')
             ->paginate(10);
 
-        // 2. Calcular el promedio general histórico (Opcional, para la tarjeta de resumen)
-        $promedioHistorico = RegistroPerCapita::where('instituto_id', $institutoId)->avg('per_capita');
+        // 2. CÁLCULO DEL PROMEDIO (Para la tarjeta que me indicaste)
+        // Usamos avg() para promediar la columna 'per_capita' de este instituto
+        $promedioPercapitaDiario = RegistroPerCapita::where('instituto_id', $institutoId)
+            ->avg('per_capita');
 
-        // 3. Enviar los datos a la vista
-        return view('metaAnual.perCapita.index', compact('registrosPerCapita', 'promedioHistorico'));
+        // 3. Enviar AMBAS variables a la vista
+        return view('metaAnual.perCapita.index', compact(
+            'registrosPerCapita',
+            'promedioPercapitaDiario' // <--- Aquí pasamos el valor a la vista
+        ));
     }
 
     public function perCapitaCreate()
