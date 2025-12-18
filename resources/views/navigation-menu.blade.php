@@ -1,8 +1,3 @@
-{{-- La directiva php que cree permite crear mas secciones en la pagina principal --}}
-{{-- Informacion para crear un enlace: 
-    name -> nombre de la seccion
-    url -> la ruta de esa seccion
-    active -> determina en que url o seccion estamos y lo pone como activo  --}}
 @php
     $linkspublicos = [
         [
@@ -12,7 +7,7 @@
         ],
     ];
 
-    // Links para usuarios autenticados
+    
     $linkslogin = [
         [
             'name' => 'Graficas',
@@ -43,6 +38,12 @@
             'url' => route('acerca-de'),
             'active' => request()->routeIs('acerca-de'),
         ],
+        [
+            'name' => 'ICA',
+            'url' => route('indicesCalidad.index'), 
+            'active' => request()->routeIs('indicesCalidad.*'),
+            'can' => ['Acceso a Indices'], 
+        ]
     ];
 @endphp
 
@@ -99,7 +100,7 @@
                                         <button type="button"
                                             class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-gray-500 bg-white hover:text-gray-700 focus:outline-none focus:bg-gray-50 active:bg-gray-50 transition ease-in-out duration-150">
                                             {{ Auth::user()->name }}
-                                            <svg class="ms-2 -me-0.5 h-4 w-4" xmlns="http://www.w3.org/2000/svg"
+                                            <svg class="ms-2 -me-0.5 h-4 w-4" xmlns="http:
                                                 fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                                                 <path stroke-linecap="round" stroke-linejoin="round"
                                                     d="M19.5 8.25l-7.5 7.5-7.5-7.5" />

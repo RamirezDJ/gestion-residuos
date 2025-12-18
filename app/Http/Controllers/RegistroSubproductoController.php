@@ -24,16 +24,16 @@ class RegistroSubproductoController extends Controller
      */
     public function index(Request $request)
     {
-        // 1. Capturamos el filtro
+        
         $tiempo = $request->input('tiempo', 'general');
         $institutoId = auth()->user()->instituto_id;
 
-        // 2. Query Base
+        
         $query = GenSubproducto::where('instituto_id', $institutoId);
 
         switch ($tiempo) {
             case 'general':
-                // --- VISTA SEMANAL (CORREGIDA) ---
+                
                 $registroPeriodo = $query->select(
                     DB::raw('MIN(fecha) as fecha_inicio'),
                     DB::raw('MAX(fecha) as fecha_final'),
@@ -45,7 +45,7 @@ class RegistroSubproductoController extends Controller
                     ->orderBy('fecha_inicio', 'desc')
                     ->paginate(10);
 
-                // TRUCO DE MAGIA: Forzar fechas de Lunes a Domingo para el Wizard
+                
                 $registroPeriodo->getCollection()->transform(function ($item) {
                     $item->fecha_inicio = Carbon::parse($item->fecha_inicio)->startOfWeek()->format('Y-m-d');
                     $item->fecha_final = Carbon::parse($item->fecha_final)->endOfWeek()->format('Y-m-d');
@@ -54,32 +54,32 @@ class RegistroSubproductoController extends Controller
                 break;
 
             case 'zonas_conteo':
-                // --- VISTA POR ZONA ---
+                
                 $registroPeriodo = $query->select(
                     DB::raw('MIN(fecha) as fecha_inicio'),
                     DB::raw('MAX(fecha) as fecha_final'),
                     DB::raw('SUM(valor_kg) as total_kg'),
                     'instituto_id',
-                    'zona_id' // Agrupamos por Zona
+                    'zona_id' 
                 )
-                    ->with('zona') // Aquí usamos la función que agregaste en el PASO 1
+                    ->with('zona') 
                     ->groupBy('instituto_id', 'zona_id', DB::raw('YEARWEEK(fecha, 1)'))
                     ->orderBy('fecha_inicio', 'desc')
                     ->paginate(10);
                 break;
 
-            case 'zonas_areas': // Mantenemos el nombre 'zonas_areas' para no romper tu vista blade
-                // --- VISTA DETALLADA (POR SUBPRODUCTO) ---
-                // Ya que confirmamos que 'Area' no existe, usamos Subproducto
+            case 'zonas_areas': 
+                
+                
                 $registroPeriodo = $query->select(
                     DB::raw('MIN(fecha) as fecha_inicio'),
                     DB::raw('MAX(fecha) as fecha_final'),
                     DB::raw('SUM(valor_kg) as total_kg'),
                     'instituto_id',
                     'zona_id',
-                    'subproducto_id' // Agrupamos por Subproducto
+                    'subproducto_id' 
                 )
-                    ->with(['zona', 'subproducto']) // Usamos las funciones del PASO 1
+                    ->with(['zona', 'subproducto']) 
                     ->groupBy('instituto_id', 'zona_id', 'subproducto_id', DB::raw('YEARWEEK(fecha, 1)'))
                     ->orderBy('fecha_inicio', 'desc')
                     ->paginate(10);
@@ -115,11 +115,11 @@ class RegistroSubproductoController extends Controller
         return view('gensubproductos.create', compact('zonas', 'subproductos'));
     }
 
-    // App/Http/Controllers/RegistroSubproductoController.php
+    
 
     public function checkWeek(Request $request)
     {
-        // 1. Validar entrada
+        
         $request->validate([
             'inicio' => 'required|date',
             'final' => 'required|date',
@@ -129,12 +129,12 @@ class RegistroSubproductoController extends Controller
         $final = \Carbon\Carbon::parse($request->final)->format('Y-m-d');
         $institutoId = auth()->user()->instituto_id;
 
-        // 2. Verificar si existe AL MENOS UN registro en ese rango
+        
         $exists = \App\Models\GenSubproducto::where('instituto_id', $institutoId)
             ->whereBetween('fecha', [$inicio, $final])
             ->exists();
 
-        // 3. Responder JSON
+        
         return response()->json(['exists' => $exists]);
     }
 
@@ -144,30 +144,30 @@ class RegistroSubproductoController extends Controller
      */
     public function store(Request $request)
     {
-        // Validación básica
+        
         $request->validate([
             'valores' => 'required|array',
         ]);
 
         $institutoId = auth()->user()->instituto_id;
 
-        // La estructura que llega es: valores[zona_id][subproducto_id][fecha] = cantidad
+        
         $valores = $request->input('valores', []);
 
         $batchData = [];
         $now = now();
 
         if (count($valores) > 0) {
-            // El primer nivel del array tiene la ZONA como clave ($zonaId)
+            
             foreach ($valores as $zonaId => $subproductos) {
                 foreach ($subproductos as $subproductoId => $fechas) {
                     foreach ($fechas as $fecha => $kilos) {
 
-                        // Validamos que sea número y mayor a 0
+                        
                         if (is_numeric($kilos) && $kilos > 0) {
                             $batchData[] = [
                                 'instituto_id'   => $institutoId,
-                                'zona_id'        => $zonaId, // <--- ¡ESTA LÍNEA ES LA QUE FALTABA!
+                                'zona_id'        => $zonaId, 
                                 'subproducto_id' => $subproductoId,
                                 'fecha'          => $fecha,
                                 'valor_kg'       => $kilos,
@@ -180,9 +180,9 @@ class RegistroSubproductoController extends Controller
             }
         }
 
-        // Insertamos
+        
         if (count($batchData) > 0) {
-            // Usamos una transacción para mayor seguridad
+            
             \DB::transaction(function () use ($batchData) {
                 \App\Models\GenSubproducto::insert($batchData);
             });
@@ -213,30 +213,30 @@ class RegistroSubproductoController extends Controller
         $final = \Carbon\Carbon::parse($final);
         $institutoId = Auth::user()->instituto_id;
 
-        // 1. LISTAS MAESTRAS (Para dibujar la estructura completa de la tabla)
-        // Asegúrate de que los modelos Zona y Subproducto estén bien referenciados
+        
+        
         $zonas = \App\Models\Zona::where('instituto_id', $institutoId)->get();
         $subproductos = \App\Models\Subproducto::all();
 
-        // 2. DATOS EXISTENTES (Datos crudos para rellenar la tabla)
-        // Traemos los datos tal cual están en la BD para que la vista los filtre
+        
+        
         $datosRegistrados = \App\Models\GenSubproducto::where('instituto_id', $institutoId)
             ->whereBetween('fecha', [$inicio->format('Y-m-d'), $final->format('Y-m-d')])
             ->get();
 
-        // 3. DATOS AGRUPADOS (Solo para el resumen de arriba, totales, etc.)
-        // Mantenemos tu lógica original para los cuadros de resumen
+        
+        
         $datosAgrupados = $datosRegistrados->map(function ($item) {
-            // Agregamos nombres para facilitar el resumen
+            
             $item->subproducto_nombre = $item->subproducto->nombre ?? 'Desconocido';
             return $item;
         });
 
         return view('gensubproductos.show', [
-            'zonas' => $zonas,                   // <--- NECESARIO para el bucle principal
-            'subproductos' => $subproductos,     // <--- NECESARIO para el bucle secundario
-            'datosRegistrados' => $datosRegistrados, // <--- NECESARIO para buscar los valores
-            'datosAgrupados' => $datosAgrupados, // <--- Para los totales del encabezado
+            'zonas' => $zonas,                   
+            'subproductos' => $subproductos,     
+            'datosRegistrados' => $datosRegistrados, 
+            'datosAgrupados' => $datosAgrupados, 
             'inicio' => $inicio,
             'final' => $final,
             'instituto' => Auth::user()->instituto
@@ -248,37 +248,37 @@ class RegistroSubproductoController extends Controller
      */
     public function edit(Request $request, $instituto_id, $inicio, $final)
     {
-        // 1. Parsear fechas
+        
         $inicioDate = \Carbon\Carbon::parse($inicio);
         $finalDate = \Carbon\Carbon::parse($final);
 
-        // 2. Auth Check
+        
         if (!Auth::check()) {
             return redirect()->route('login');
         }
         $instituto = Auth::user()->instituto;
 
-        // 3. Obtener Catálogos
-        // NECESITAMOS LAS ZONAS para el Wizard
+        
+        
         $zonas = \App\Models\Zona::where('instituto_id', $instituto->id)->get();
         $subproductos = \App\Models\Subproducto::all();
 
-        // 4. Obtener Datos Registrados (CRUDOS)
-        // IMPORTANTE: Traemos el 'zona_id' para saber dónde pintar el dato
+        
+        
         $datosRegistrados = \App\Models\GenSubproducto::where('instituto_id', $instituto->id)
             ->whereBetween('fecha', [$inicioDate->startOfDay(), $finalDate->endOfDay()])
-            ->select('zona_id', 'subproducto_id', 'fecha', 'valor_kg') // <--- Seleccionamos zona_id
+            ->select('zona_id', 'subproducto_id', 'fecha', 'valor_kg') 
             ->get();
 
-        // Retornamos vista con datos limpios
+        
         return view('gensubproductos.edit', [
             'instituto' => $instituto,
             'instituto_id' => $instituto->id,
-            'inicio' => $inicioDate->format('Y-m-d'), // Formato estándar para JS
+            'inicio' => $inicioDate->format('Y-m-d'), 
             'final' => $finalDate->format('Y-m-d'),
-            'zonas' => $zonas,              // <--- Agregado
+            'zonas' => $zonas,              
             'subproductos' => $subproductos,
-            'datosRegistrados' => $datosRegistrados // <--- Enviamos la colección plana
+            'datosRegistrados' => $datosRegistrados 
         ]);
     }
 
@@ -287,7 +287,7 @@ class RegistroSubproductoController extends Controller
      */
     public function updateMultiple(Request $request)
     {
-        // 1. Validaciones
+        
         $request->validate([
             'inicio' => 'required',
             'final' => 'required',
@@ -298,7 +298,7 @@ class RegistroSubproductoController extends Controller
         $institutoId = $request->input('instituto_id');
         $valores = $request->input('valores') ?? [];
 
-        // 2. Procesamiento
+        
         if (!empty($valores) && is_array($valores)) {
 
             foreach ($valores as $zonaId => $subproductos) {
@@ -309,32 +309,32 @@ class RegistroSubproductoController extends Controller
 
                     foreach ($fechas as $fecha => $valor) {
 
-                        // Convertimos el valor a número flotante
-                        // Si viene vacío "", floatval lo convierte a 0
+                        
+                        
                         $valorFloat = floatval($valor);
 
-                        // --- AQUÍ ESTÁ LA SOLUCIÓN ---
+                        
 
-                        // CASO A: Si el usuario escribió un número real (ej: 1.5)
+                        
                         if ($valorFloat > 0) {
                             GenSubproducto::updateOrCreate(
                                 [
-                                    // Buscamos si ya existe este registro específico
+                                    
                                     'instituto_id' => $institutoId,
                                     'zona_id' => $zonaId,
                                     'subproducto_id' => $subproductoId,
                                     'fecha' => $fecha,
                                 ],
                                 [
-                                    // Actualizamos o creamos con el valor
+                                    
                                     'valor_kg' => $valorFloat
                                 ]
                             );
                         }
-                        // CASO B: Si el campo está vacío o es 0
+                        
                         else {
-                            // Buscamos si existe ese registro basura en la BD y lo BORRAMOS
-                            // No creamos nada nuevo.
+                            
+                            
                             GenSubproducto::where('instituto_id', $institutoId)
                                 ->where('zona_id', $zonaId)
                                 ->where('subproducto_id', $subproductoId)
@@ -396,21 +396,21 @@ class RegistroSubproductoController extends Controller
 
     public function search(Request $request)
     {
-        // 1. Capturamos los datos
+        
         $termino = $request->input('query');
-        $tiempo = $request->input('tiempo', 'general'); // Por defecto 'general'
+        $tiempo = $request->input('tiempo', 'general'); 
         $institutoId = auth()->user()->instituto_id;
 
-        // 2. Preparamos la consulta base
+        
         $query = GenSubproducto::where('instituto_id', $institutoId);
 
-        // 3. Variable por defecto para la vista
+        
         $viewName = 'gensubproductos.partials.table-general';
 
-        // 4. Lógica idéntica al index, pero agregando el filtro 'where' de búsqueda
+        
         switch ($tiempo) {
             case 'general':
-                // --- BÚSQUEDA SEMANAL ---
+                
                 $query->select(
                     DB::raw('MIN(fecha) as fecha_inicio'),
                     DB::raw('MAX(fecha) as fecha_final'),
@@ -421,14 +421,14 @@ class RegistroSubproductoController extends Controller
                     ->groupBy('instituto_id', 'semana_id')
                     ->orderBy('fecha_inicio', 'desc');
 
-                // Búsqueda: Por fecha
+                
                 if ($termino) {
                     $query->where('fecha', 'like', "%{$termino}%");
                 }
 
                 $registroPeriodo = $query->paginate(10);
 
-                // [IMPORTANTE] Corrección para que el botón EDITAR funcione tras buscar
+                
                 $registroPeriodo->getCollection()->transform(function ($item) {
                     $item->fecha_inicio = Carbon::parse($item->fecha_inicio)->startOfWeek()->format('Y-m-d');
                     $item->fecha_final = Carbon::parse($item->fecha_final)->endOfWeek()->format('Y-m-d');
@@ -439,7 +439,7 @@ class RegistroSubproductoController extends Controller
                 break;
 
             case 'zonas_conteo':
-                // --- BÚSQUEDA POR ZONA ---
+                
                 $query->select(
                     DB::raw('MIN(fecha) as fecha_inicio'),
                     DB::raw('MAX(fecha) as fecha_final'),
@@ -447,11 +447,11 @@ class RegistroSubproductoController extends Controller
                     'instituto_id',
                     'zona_id'
                 )
-                    ->with('zona') // Cargar relación para mostrar el nombre
+                    ->with('zona') 
                     ->groupBy('instituto_id', 'zona_id', DB::raw('YEARWEEK(fecha, 1)'))
                     ->orderBy('fecha_inicio', 'desc');
 
-                // Búsqueda: Por nombre de Zona
+                
                 if ($termino) {
                     $query->whereHas('zona', function ($q) use ($termino) {
                         $q->where('nombre', 'like', "%{$termino}%");
@@ -463,7 +463,7 @@ class RegistroSubproductoController extends Controller
                 break;
 
             case 'zonas_areas':
-                // --- BÚSQUEDA DETALLADA (SUBPRODUCTO) ---
+                
                 $query->select(
                     DB::raw('MIN(fecha) as fecha_inicio'),
                     DB::raw('MAX(fecha) as fecha_final'),
@@ -472,11 +472,11 @@ class RegistroSubproductoController extends Controller
                     'zona_id',
                     'subproducto_id'
                 )
-                    ->with(['zona', 'subproducto']) // Cargar ambas relaciones
+                    ->with(['zona', 'subproducto']) 
                     ->groupBy('instituto_id', 'zona_id', 'subproducto_id', DB::raw('YEARWEEK(fecha, 1)'))
                     ->orderBy('fecha_inicio', 'desc');
 
-                // Búsqueda: Por Zona, Subproducto o Fecha
+                
                 if ($termino) {
                     $query->where(function ($mainQuery) use ($termino) {
                         $mainQuery->whereHas('zona', function ($q) use ($termino) {
@@ -494,12 +494,12 @@ class RegistroSubproductoController extends Controller
                 break;
         }
 
-        // 5. Si es AJAX (Buscador en tiempo real), devolvemos solo la tabla
+        
         if ($request->ajax()) {
             return view($viewName, ['registroPeriodo' => $registroPeriodo])->render();
         }
 
-        // 6. Si no es AJAX (Fallback), devolvemos la vista completa
+        
         return view('gensubproductos.index', compact('registroPeriodo', 'tiempo', 'viewName'));
     }
 

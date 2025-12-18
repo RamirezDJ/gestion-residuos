@@ -12,109 +12,136 @@
             <div class="bg-white overflow-hidden shadow-xl sm:rounded-lg">
                 <div class="p-6 lg:p-8">
 
-                    {{-- Encabezado de la sección y Botón de Crear --}}
+                    {{-- 1. Encabezado y Botón --}}
                     <div class="flex flex-col md:flex-row justify-between items-center mb-6">
                         <div>
                             <h3 class="text-xl font-bold text-gray-700">Registros Diarios</h3>
-                            <p class="text-sm text-gray-500 mt-1">Consulta y gestion de los registros Per Capita diario.
+                            <p class="text-sm text-gray-500 mt-1">
+                                Consulta y gestión de los registros Per Cápita diario.
                             </p>
                         </div>
 
-                        {{-- BOTÓN CREAR NUEVO REGISTRO --}}
                         <a href="{{ route('metaAnual.percapita.create') }}"
                             class="mt-4 md:mt-0 inline-flex items-center px-4 py-2 bg-blue-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-blue-700 active:bg-blue-900 focus:outline-none focus:border-blue-900 focus:ring focus:ring-blue-300 disabled:opacity-25 transition">
                             <i class="fas fa-plus mr-2"></i> Nuevo Registro
                         </a>
                     </div>
 
-                    {{-- Tabla de Registros --}}
+                    {{-- 2. Tabla de Registros (Tu parcial) --}}
                     <div class="mt-4">
-                        <div class="overflow-x-auto relative shadow-md sm:rounded-lg">
-                            <table class="w-full text-sm text-left text-gray-500">
-                                <thead class="text-xs text-center text-gray-700 uppercase bg-gray-50">
-                                    <tr>
-                                        <th scope="col" class="py-3 px-6">Fecha</th>
-                                        <th scope="col" class="py-3 px-6">Visitantes</th>
-                                        <th scope="col" class="py-3 px-6">Trabajadores</th>
-                                        <th scope="col" class="py-3 px-6">Total Personas</th>
-                                        <th scope="col" class="py-3 px-6">Residuos (Kg)</th>
-                                        <th scope="col" class="py-3 px-6">Per Cápita</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {{-- Usamos la variable $registrosPerCapita que enviamos desde el controlador --}}
-                                    @forelse ($registrosPerCapita as $registro)
-                                        <tr class="bg-white border-b hover:bg-gray-50 text-center">
-                                            {{-- Fecha --}}
-                                            <td class="py-4 px-6 text-gray-900 font-medium">
-                                                {{ \Carbon\Carbon::parse($registro->fecha)->format('d/m/Y') }}
-                                            </td>
-
-                                            {{-- Visitantes --}}
-                                            <td class="py-4 px-6">
-                                                {{ number_format($registro->visitantes) }}
-                                            </td>
-
-                                            {{-- Trabajadores --}}
-                                            <td class="py-4 px-6">
-                                                {{ number_format($registro->trabajadores) }}
-                                            </td>
-
-                                            {{-- Total Personas (Calculado en la vista) --}}
-                                            <td class="py-4 px-6">
-                                                {{ number_format($registro->visitantes + $registro->trabajadores) }}
-                                            </td>
-
-                                            {{-- Residuos (kilos_residuos en la BD) --}}
-                                            <td class="py-4 px-6">
-                                                {{ number_format($registro->kilos_residuos, 2) }} kg
-                                            </td>
-
-                                            {{-- Per Cápita (Resaltado) --}}
-                                            <td class="py-4 px-6">
-                                                <span
-                                                    class="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded">
-                                                    {{ number_format($registro->per_capita, 4) }}
-                                                </span>
-                                            </td>
-                                        </tr>
-                                    @empty
-                                        <tr>
-                                            <td colspan="6" class="py-8 text-center text-gray-500">
-                                                <div class="flex flex-col items-center justify-center">
-                                                    <i class="fas fa-folder-open text-4xl mb-3 text-gray-300"></i>
-                                                    <p>No hay registros diarios capturados aún.</p>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    @endforelse
-                                </tbody>
-                            </table>
-                        </div>
-                        <div class="mt-4">
-                            {{ $registrosPerCapita->links() }}
-                        </div>
+                        @include('metaAnual.perCapita.partials.table-general')
                     </div>
 
-                    {{-- Tarjetas Informativas (Resumen rápido) --}}
-                    <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 mb-8">
-                        <!-- Meta Actual Card (Solo lectura en esta vista) -->
-                        <div class="bg-gray-50 rounded-lg border border-gray-200 p-4">
+                    {{-- 3. SECCIÓN INFERIOR: TARJETAS Y GRÁFICA --}}
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8 mt-8 border-t pt-6 border-gray-100">
+
+                        <!-- Tarjeta Promedio (Izquierda) -->
+                        <div
+                            class="bg-gray-50 rounded-lg border border-gray-200 p-4 h-full flex flex-col justify-center">
                             <div class="flex items-center justify-between">
                                 <h3 class="text-md font-medium text-gray-600">Promedio General</h3>
-                                <i class="fas fa-chart-line text-blue-400"></i>
+                                <div class="p-2 bg-blue-100 rounded-full">
+                                    <i class="fas fa-chart-line text-blue-600"></i>
+                                </div>
                             </div>
-                            <div class="mt-2">
-                                <p class="text-2xl font-bold text-gray-800">
-                                    {{ number_format($promedioPercapitaDiario ?? 0, 3) }} <span
-                                        class="text-sm font-normal text-gray-500">kg/p/día</span>
+                            <div class="mt-4">
+                                <p class="text-3xl font-bold text-gray-800">
+                                    {{ number_format($promedioPercapitaDiario ?? 0, 3) }}
                                 </p>
+                                <p class="text-sm font-normal text-gray-500">kg/persona/día</p>
                             </div>
                         </div>
+
+                        <!-- Tarjeta Gráfica (Derecha - ESTA ES LA QUE FALTABA) -->
+                        <div class="lg:col-span-2 bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
+                            <h3 class="text-sm font-bold text-gray-700 mb-4">Tendencia Histórica</h3>
+                            {{-- Contenedor donde ApexCharts dibujará la gráfica --}}
+                            <div id="trendChart" class="w-full h-64"></div>
+                        </div>
+
                     </div>
 
                 </div>
             </div>
         </div>
     </div>
+
+    {{-- 4. SCRIPT PARA DIBUJAR LA GRÁFICA --}}
+    {{-- Si ya tienes ApexCharts en app.js, puedes quitar la línea del CDN --}}
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Obtenemos los datos que mandó el controlador
+            const datos = @json($datosGrafica ?? []);
+
+            const options = {
+                series: [{
+                    name: "Per Cápita",
+                    data: datos // Formato esperado: [{x: 'fecha', y: valor}, ...]
+                }],
+                chart: {
+                    type: 'area',
+                    height: 250,
+                    fontFamily: 'Inter, sans-serif',
+                    zoom: {
+                        enabled: false
+                    },
+                    toolbar: {
+                        show: false
+                    }
+                },
+                colors: ['#2563eb'],
+                dataLabels: {
+                    enabled: false
+                },
+                stroke: {
+                    curve: 'smooth',
+                    width: 2
+                },
+                fill: {
+                    type: 'gradient',
+                    gradient: {
+                        shadeIntensity: 1,
+                        opacityFrom: 0.4,
+                        opacityTo: 0.05,
+                        stops: [0, 100]
+                    }
+                },
+                xaxis: {
+                    type: 'datetime',
+                    labels: {
+                        format: 'dd MMM'
+                    },
+                    tooltip: {
+                        enabled: false
+                    }
+                },
+                yaxis: {
+                    labels: {
+                        formatter: (val) => val.toFixed(3)
+                    }
+                },
+                tooltip: {
+                    x: {
+                        format: 'dd MMM yyyy'
+                    },
+                    y: {
+                        formatter: function(value) {
+                            return value + " kg/p/día";
+                        }
+                    }
+                }
+            };
+
+            if (datos.length > 0) {
+                const chart = new ApexCharts(document.querySelector("#trendChart"), options);
+                chart.render();
+            } else {
+                document.querySelector("#trendChart").innerHTML =
+                    '<div class="flex items-center justify-center h-full text-gray-400 text-sm">No hay suficientes datos para la gráfica.</div>';
+            }
+        });
+    </script>
+
 </x-app-layout>

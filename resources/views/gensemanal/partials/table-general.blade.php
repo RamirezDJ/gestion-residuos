@@ -1,4 +1,3 @@
-{{-- Ya no definimos $__livewire aquí --}}
 <table class="w-full text-sm text-left text-gray-700 dark:text-gray-400">
     <thead class="text-xs text-center text-gray-800 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
         <tr>

@@ -9,6 +9,7 @@ use App\Http\Controllers\ReporteDiarioController;
 use App\Http\Controllers\PrediccionesZonasController;
 use App\Http\Controllers\RegistroSemanalController;
 use App\Http\Controllers\RegistroSubproductoController;
+use App\Http\Controllers\IndicesCalidadController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -28,7 +29,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
     Route::get('/gensemanal/pdf/{fecha}', [RegistroSemanalController::class, 'GenerarPDF'])->name('gensemanal.pdf')->middleware(['can:Acceso a Inicio']);
     Route::get('/gensemanal/excel/{fecha}', [RegistroSemanalController::class, 'GenerarExcel'])->name('gensemanal.excel')->middleware(['can:Acceso a Inicio']);
 
-    // Rutas para obtener datos de cada gráfica de manera dinámica de los residuos semanales
+
     Route::get('/graficassemanal', [GraficasSemanalController::class, 'index'])->name('graficassemanal.index')->middleware(['can:Acceso a Graficas']);
     Route::get('/graficassemanal/data', [GraficasSemanalController::class, 'fetchGraphData'])->name('graficassemanal.data')->middleware(['can:Acceso a Graficas']);
     Route::get('/graficassemanal/data/top3', [GraficasSemanalController::class, 'getTop3Generado'])->name('graficassemanal.data.top3')->middleware(['can:Acceso a Graficas']);
@@ -46,7 +47,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
     Route::get('/gensubproductos/pdf/{instituto_id}/{inicio}/{final}', [RegistroSubproductoController::class, 'GenerarPDF'])->name('gensubproductos.pdf')->middleware(['can:Acceso a Inicio']);
     Route::get('/gensubproductos/excel/{instituto_id}/{inicio}/{final}', [RegistroSubproductoController::class, 'GenerarExcel'])->name('gensubproductos.excel')->middleware(['can:Acceso a Inicio']);
 
-    // Ruta para obtener datos de cada gráfica de manera dinámica
+
     Route::get('/graficassubproductos', [GraficasSubproductosController::class, 'index'])->name('graficassubproductos.index')->middleware(['can:Acceso a Graficas']);
     Route::get('/graficassubproductos/data', [GraficasSubproductosController::class, 'fetchGraphData'])->name('graficassubproductos.data')->middleware(['can:Acceso a Graficas']);
     Route::get('/graficassubproductos/data/top3', [GraficasSubproductosController::class, 'getTop3Subproductos'])->name('graficassubproductos.data.top3')->middleware(['can:Acceso a Graficas']);
@@ -59,18 +60,27 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
     Route::resource('/evidenciasGenerado',  ImageController::class)
         ->middleware(['can:Acceso a Evidencias de Generación']);
 
-    Route::get('/metaAnual', [MetaAnualController::class, 'index'])->name('metaAnual.index')->middleware(['can:Acceso a Meta Anual']);;
+    Route::get('/metaAnual', [MetaAnualController::class, 'index'])->name('metaAnual.index')->middleware(['can:Acceso a Meta Anual']);
     Route::get('/metaAnual/percapita', [MetaAnualController::class, 'perCapitaIndex'])->name('metaAnual.percapita.index')->middleware(['can:Acceso a Meta Anual']);
     Route::get('/metaAnual/percapita/create', [MetaAnualController::class, 'perCapitaCreate'])->name('metaAnual.percapita.create')->middleware(['can:Acceso a Meta Anual']);
     Route::post('/metaAnual/percapita', [MetaAnualController::class, 'perCapitaStore'])->name('metaAnual.percapita.store')->middleware(['can:Acceso a Meta Anual']);
-    Route::post('/metaAnual/percapita', [MetaAnualController::class, 'perCapitaStore'])->name('metaAnual.percapita.store')->middleware(['can:Acceso a Meta Anual']);
+    Route::get('/metaAnual/percapita/{id}/edit', [MetaAnualController::class, 'perCapitaEdit'])->name('metaAnual.percapita.edit')->middleware(['can:Acceso a Meta Anual']);
+    Route::put('/metaAnual/percapita/{id}', [MetaAnualController::class, 'perCapitaUpdate'])->name('metaAnual.percapita.update')->middleware(['can:Acceso a Meta Anual']);
+    Route::delete('/metaAnual/percapita/{id}', [MetaAnualController::class, 'perCapitaDestroy'])->name('metaAnual.percapita.destroy')->middleware(['can:Acceso a Meta Anual']);
+    Route::get('/metaAnual/percapita/{id}', [MetaAnualController::class, 'perCapitaShow'])->name('metaAnual.percapita.show')->middleware(['can:Acceso a Meta Anual']);
 
     Route::get('/reporteDiario', [ReporteDiarioController::class, 'index'])->name('reporteDiario.index')->middleware(['can:Acceso a Inicio']);
     Route::post('/reporteDiario/generar', [ReporteDiarioController::class, 'generarReporte'])->name('reporteDiario.generar')->middleware(['can:Acceso a Inicio']);
 
     Route::get('/prediccionesZonas/obtenerPredicciones', [PrediccionesZonasController::class, 'obtenerPredicciones']);
-    // Route::get('/prediccionesZonas/obtenerTodasLasPredicciones', [PrediccionesZonasController::class, 'obtenerTodasLasPredicciones']);
+
     Route::resource('/prediccionesZonas', PrediccionesZonasController::class)->middleware(['can:Acceso a Predicciones']);
+
+    Route::get('/indices-calidad/create/{tipo}', [IndicesCalidadController::class, 'create'])->name('indicesCalidad.create');
+    Route::get('/indices-calidad/ver/{tipo}', [IndicesCalidadController::class, 'show'])->name('indicesCalidad.show');
+    Route::get('/indices-calidad-search', [IndicesCalidadController::class, 'search'])->name('indicesCalidad.search');
+    Route::get('/indices-calidad', [IndicesCalidadController::class, 'index'])->name('indicesCalidad.index');
+    Route::resource('indices-calidad', IndicesCalidadController::class)->except(['index', 'show', 'create'])->names('indicesCalidad');
 
     Route::get('/dashboard', function () {
         return view('dashboard');

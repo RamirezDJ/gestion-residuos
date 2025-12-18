@@ -58,7 +58,7 @@
             </div>
 
             <p class="mt-4 text-gray-500 text-sm leading-relaxed">
-                Ingresa al formulario para capturar la cantidad de subprodcutos generados en la separación de los residuos
+                Ingresa al formulario para capturar la cantidad de subproductos generados en la separación de los residuos
                 sólidos con potencial a valorización.
             </p>
 

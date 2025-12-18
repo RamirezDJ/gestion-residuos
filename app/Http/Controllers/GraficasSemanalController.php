@@ -21,7 +21,7 @@ class GraficasSemanalController extends Controller
         $institutoId = Auth::user()->instituto_id;
         $top3Generado = $this->getTop3Generado($baseQuery, $institutoId);
 
-        // dd($top3Generado);
+        
 
         return view('graficassemanal.index', compact('top3Generado'));
     }
@@ -47,7 +47,7 @@ class GraficasSemanalController extends Controller
                     $query->whereBetween($campoFecha, [now()->subDays(90), now()]);
                     break;
                 default:
-                    // Sin filtro de fecha
+                    
                     break;
             }
         }
@@ -80,7 +80,7 @@ class GraficasSemanalController extends Controller
                 $data = $this->getGraficoTendenciaResiduos($baseQuery, $institutoId);
                 break;
             case 'all':
-                // Usamos clone() para no afectar la query original en cada llamada
+                
                 $data = [
                     'top3' => $this->getTop3Generado($baseQuery->clone(), $institutoId),
                     'pieChart' => $this->getPorcentajeResiduos($baseQuery->clone(), $institutoId),
@@ -95,17 +95,17 @@ class GraficasSemanalController extends Controller
         return response()->json($data);
     }
 
-    // Funciones para obtener los datos de cada grafica de generacion de residuos
+    
 
-    // Obtener datos de top 3 zonas con mayor generacion
+    
     private function getTop3Generado($query, $institutoId = null)
     {
         $q = $query->clone();
 
-        // Unimos con zonas para filtrar por instituto
+        
         $q->join('zonas_areas', 'gen_semanals.zonas_areas_id', '=', 'zonas_areas.id')
             ->join('zonas', 'zonas_areas.zona_id', '=', 'zonas.id')
-            // CORRECCIÓN: Usamos 'categorias' y 'categoria_id' (que es lo que tienes en la BD)
+            
             ->join('categorias', 'gen_semanals.categoria_id', '=', 'categorias.id');
 
         if ($institutoId) {
@@ -116,7 +116,7 @@ class GraficasSemanalController extends Controller
             'categorias.nombre as nombre',
             DB::raw('SUM(gen_semanals.kilos) as total_kg')
         )
-            // Agrupamos por Categoría
+            
             ->groupBy('categorias.id', 'categorias.nombre')
             ->orderByDesc('total_kg')
             ->limit(3)
@@ -129,7 +129,7 @@ class GraficasSemanalController extends Controller
             });
     }
 
-    // Obtener datos de la grafica pastel de porcentaje de generacion por zonas
+    
     private function getPorcentajeResiduos($query, $institutoId = null)
     {
         $q = $query->clone();
@@ -150,7 +150,7 @@ class GraficasSemanalController extends Controller
             ->map(function ($item) {
                 return [
                     'nombre' => $item->nombre,
-                    // IMPORTANTE: Forzamos número
+                    
                     'total_kg' => (float) $item->total_kg
                 ];
             });
@@ -168,7 +168,7 @@ class GraficasSemanalController extends Controller
         return $query->select(
             'zonas.id as zona_id',
             'zonas.nombre as zona',
-            // --- LÍNEA CORREGIDA ---
+            
             DB::raw('SUM(gen_semanals.kilos) as total_kg')
         )
             ->groupBy('zonas.id', 'zonas.nombre')
@@ -186,11 +186,11 @@ class GraficasSemanalController extends Controller
     {
         $q = $query->clone();
 
-        // 1. Joins necesarios para llegar al Instituto (Filtro de seguridad)
+        
         $q->join('zonas_areas', 'gen_semanals.zonas_areas_id', '=', 'zonas_areas.id')
             ->join('zonas', 'zonas_areas.zona_id', '=', 'zonas.id');
 
-        // 2. Join con Categorías (Para obtener el nombre del subproducto)
+        
         $q->join('categorias', 'gen_semanals.categoria_id', '=', 'categorias.id');
 
         if ($institutoId) {
@@ -199,17 +199,17 @@ class GraficasSemanalController extends Controller
 
         return $q->select(
             'gen_semanals.fecha',
-            'categorias.nombre as nombre_categoria', // Ahora seleccionamos la categoría
+            'categorias.nombre as nombre_categoria', 
             DB::raw('SUM(gen_semanals.kilos) as total_kg')
         )
-            // --- CAMBIO CLAVE: Agrupamos por FECHA y CATEGORÍA ---
+            
             ->groupBy('gen_semanals.fecha', 'categorias.id', 'categorias.nombre')
             ->orderBy('gen_semanals.fecha', 'ASC')
             ->get()
             ->map(function ($item) {
                 return [
                     'fecha' => $item->fecha,
-                    // Enviamos el nombre de la categoría como 'nombre' para que el JS no falle
+                    
                     'nombre' => $item->nombre_categoria,
                     'total_kg' => (float) $item->total_kg
                 ];

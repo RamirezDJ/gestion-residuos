@@ -1,37 +1,52 @@
 <x-app-layout>
+    {{-- 1. Encabezado (La barra gris con el título) --}}
     <x-slot name="header">
-        <h2 class="font-semibold text-2xl text-gray-800 leading-tight">
-            {{ __('Graficas') }}
+        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+            {{ __('Inicio') }}
         </h2>
     </x-slot>
 
+    {{-- 2. Contenedores de diseño (Esto crea el efecto de "ventana flotante") --}}
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             <div class="bg-white overflow-hidden shadow-xl sm:rounded-lg">
+
+                {{-- === INICIO DEL CONTENIDO (Lo que teníamos antes) === --}}
+
                 <div class="p-6 lg:p-8 bg-white border-b border-gray-200">
-                    <x-application-logo class="block h-20 w-20" />
+                    <x-application-logo2 class="block h-20 w-20" />
+
+                    <h1 class="mt-8 text-2xl font-medium text-gray-900">
+                        Bienvenido {{ Auth::user()->name }}!
+                    </h1>
+
+                    <p class="mt-6 text-gray-500 leading-relaxed">
+                        Este sistema permite monitorear los Índices de Calidad del Agua (ICA),
+                        registrando parámetros físicos y químicos para asegurar el cumplimiento de las normativas
+                        NOM-001-SEMARNAT-2021 y NOM-127-SSA1-2021.
+                    </p>
                 </div>
 
                 @unless (Auth::user()->hasRole('Participante'))
                     <div class="bg-gray-200 bg-opacity-25 grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 p-6 lg:p-8">
+
+                        {{-- TARJETA 1: PARÁMETROS FÍSICOS --}}
                         <div>
                             <div class="flex items-center">
-                                <i class="fa-solid fa-chart-pie text-gray-400"></i>
-                                <h2 class="ms-3 text-xl font-semibold text-gray-900">
-                                    <p>Graficas de la generación semanal</p>
+                                <h2 class="text-xl font-semibold text-gray-900">
+                                    <p>Parámetros Físicos</p>
                                 </h2>
                             </div>
 
                             <p class="mt-4 text-gray-500 text-sm leading-relaxed">
-                                Ingresa al formulario para capturar los datos generados de residuos sólidos en la semana con
-                                ayuda de las
-                                bitácoras de generación proporcionadas por el TECNM.
+                                Ingresa al formulario para capturar los datos de Conductividad, Turbidez, Temperatura y
+                                Oxígeno Disuelto.
                             </p>
 
                             <p class="mt-4 text-sm">
-                                <a href="{{ route('graficassemanal.index') }}"
+                                <a href="{{ route('indicesCalidad.show', ['tipo' => 'fisicos']) }}"
                                     class="inline-flex items-center font-semibold text-indigo-700">
-                                    Ir a graficas
+                                    Ir a registros
 
                                     <svg viewBox="0 0 20 20" class="ms-1 w-5 h-5 fill-indigo-500">
                                         <path fill-rule="evenodd"
@@ -42,24 +57,23 @@
                             </p>
                         </div>
 
+                        {{-- TARJETA 2: PARÁMETROS QUÍMICOS --}}
                         <div>
                             <div class="flex items-center">
-                                <i class="fa-solid fa-chart-pie text-gray-400"></i>
-                                <h2 class="ms-3 text-xl font-semibold text-gray-900">
-                                    <p>Graficas de la generación de subproductos</p>
+                                <h2 class="text-xl font-semibold text-gray-900">
+                                    <p>Parámetros Químicos</p>
                                 </h2>
                             </div>
 
                             <p class="mt-4 text-gray-500 text-sm leading-relaxed">
-                                Ingresa al formulario para capturar la cantidad de subproductos generados en la separación
-                                de los residuos
-                                sólidos con potencial a valorización.
+                                Ingresa al formulario para capturar los niveles de pH, Dureza, Nitratos, Nitritos y Demanda
+                                Química de Oxígeno (DQO).
                             </p>
 
                             <p class="mt-4 text-sm">
-                                <a href="{{ route('graficassubproductos.index') }}"
+                                <a href="{{ route('indicesCalidad.show', ['tipo' => 'quimicos']) }}"
                                     class="inline-flex items-center font-semibold text-indigo-700">
-                                    Ir a graficas
+                                    Ir a registros
 
                                     <svg viewBox="0 0 20 20" class="ms-1 w-5 h-5 fill-indigo-500">
                                         <path fill-rule="evenodd"
@@ -79,6 +93,9 @@
                         </div>
                     </div>
                 @endunless
+
+                {{-- === FIN DEL CONTENIDO === --}}
+
             </div>
         </div>
     </div>

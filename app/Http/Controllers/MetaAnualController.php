@@ -11,78 +11,110 @@ use Illuminate\Support\Facades\DB;
 class MetaAnualController extends Controller
 {
     /**
-     * Display a listing of the resource.
+     * Muestra la vista principal con el resumen anual.
      */
     public function index()
     {
-        // llamar a los datos dependiendo del instituto
         $institutoId = auth()->user()->instituto_id;
 
-        // Obtenemos los datos del instituto
         $instituto = Institutos::where('id', $institutoId)
             ->select('id', 'nombre', 'meta_anual', 'total_personas')
             ->first();
 
-        // Creamos una consulta base para el instituto
+
         $queryBase = GenSemanal::whereHas('zonaArea.zona', function ($query) use ($institutoId) {
             $query->where('instituto_id', $institutoId);
         });
 
-        // --- INICIO DE LA LÓGICA CORREGIDA ---
-
-        // 1. Calcular el total de residuos generados
         $totalResiduos = $queryBase->sum('kilos');
-
-        // 2. Contar los días únicos que tienen registros
         $diasUnicosConRegistro = $queryBase->distinct('fecha')->count('fecha');
 
-        // 3. Calcular el promedio de kilos POR DÍA
         $promedioKilosPorDia = $diasUnicosConRegistro > 0 ? $totalResiduos / $diasUnicosConRegistro : 0;
-
-        // 4. Calcular el promedio PER CAPITA por DÍA (Este es el cálculo correcto)
         $promedioPercapitaDiario = $instituto->total_personas > 0 ? $promedioKilosPorDia / $instituto->total_personas : 0;
 
-        // --- FIN DE LA LÓGICA CORREGIDA ---
-
-        // Porcentaje de cumplimiento de la meta anual
-        // (Esta lógica compara tu meta anual con el promedio per cápita, puedes ajustarla si es necesario)
         $excedeMeta = $promedioPercapitaDiario > $instituto->meta_anual;
 
-        // Obtener los registros de cada zona con mayor generacion
         $registroConMayorGeneracion = GenSemanal::whereHas('zonaArea.zona.instituto', function ($query) use ($institutoId) {
             $query->where('id', $institutoId);
-        })->orderBy('kilos', 'desc')->paginate(5);
+        })->orderBy('kilos', 'desc')->paginate(5, ['*'], 'gen_page');
+
+
+        $registrosPerCapita = RegistroPerCapita::where('instituto_id', $institutoId)
+            ->orderBy('fecha', 'desc')
+            ->paginate(5, ['*'], 'per_capita_page');
+
+        $promedioManual = RegistroPerCapita::where('instituto_id', $institutoId)->avg('per_capita');
+
+
+        $datosGrafica = RegistroPerCapita::where('instituto_id', $institutoId)
+            ->orderBy('fecha', 'asc')
+            ->get()
+            ->map(function ($registro) {
+                return [
+                    'x' => $registro->fecha,
+                    'y' => $registro->per_capita
+                ];
+            });
 
         return view('metaAnual.index', compact(
             'instituto',
             'totalResiduos',
-            'promedioPercapitaDiario', // <-- Pasamos la nueva variable
+            'promedioPercapitaDiario',
             'excedeMeta',
-            'registroConMayorGeneracion'
+            'registroConMayorGeneracion',
+            'registrosPerCapita',
+            'promedioManual',
+            'datosGrafica'
         ));
     }
 
     /**
-     * Muestra la vista de índice para el detalle de Generación Per Cápita.
+     * Muestra la vista independiente de Per Cápita.
      */
     public function perCapitaIndex()
     {
         $institutoId = auth()->user()->instituto_id;
 
-        // 1. Consultar los registros (para la tabla)
+        $instituto = Institutos::where('id', $institutoId)->first();
+
+
+        $queryBase = GenSemanal::whereHas('zonaArea.zona', function ($query) use ($institutoId) {
+            $query->where('instituto_id', $institutoId);
+        });
+
+        $totalResiduos = $queryBase->sum('kilos');
+        $diasUnicosConRegistro = $queryBase->distinct('fecha')->count('fecha');
+        $promedioKilosPorDia = $diasUnicosConRegistro > 0 ? $totalResiduos / $diasUnicosConRegistro : 0;
+
+        $promedioPercapitaDiario = $instituto->total_personas > 0 ? $promedioKilosPorDia / $instituto->total_personas : 0;
+        $excedeMeta = $promedioPercapitaDiario > $instituto->meta_anual;
+
+
         $registrosPerCapita = RegistroPerCapita::where('instituto_id', $institutoId)
             ->orderBy('fecha', 'desc')
             ->paginate(10);
 
-        // 2. CÁLCULO DEL PROMEDIO (Para la tarjeta que me indicaste)
-        // Usamos avg() para promediar la columna 'per_capita' de este instituto
-        $promedioPercapitaDiario = RegistroPerCapita::where('instituto_id', $institutoId)
-            ->avg('per_capita');
 
-        // 3. Enviar AMBAS variables a la vista
+        $promedioManual = RegistroPerCapita::where('instituto_id', $institutoId)->avg('per_capita');
+
+
+        $datosGrafica = RegistroPerCapita::where('instituto_id', $institutoId)
+            ->orderBy('fecha', 'asc') 
+            ->get()
+            ->map(function ($registro) {
+                return [
+                    'x' => $registro->fecha,       
+                    'y' => $registro->per_capita   
+                ];
+            });
+
         return view('metaAnual.perCapita.index', compact(
+            'instituto',
             'registrosPerCapita',
-            'promedioPercapitaDiario' // <--- Aquí pasamos el valor a la vista
+            'promedioPercapitaDiario',
+            'excedeMeta',
+            'promedioManual',
+            'datosGrafica'
         ));
     }
 
@@ -91,30 +123,20 @@ class MetaAnualController extends Controller
         return view('metaAnual.perCapita.create');
     }
 
-    /**
-     * Guarda el nuevo registro per cápita en la base de datos.
-     */
     public function perCapitaStore(Request $request)
     {
         $institutoId = auth()->user()->instituto_id;
 
-        // --- 1. VERIFICACIÓN DE DUPLICADOS (NUEVO) ---
-        // Comprobamos si ya existe un registro con la misma fecha para este instituto
         $existeRegistro = RegistroPerCapita::where('instituto_id', $institutoId)
             ->where('fecha', $request->fecha)
             ->exists();
 
         if ($existeRegistro) {
-            // Si ya existe, regresamos atrás mostrando un error en el campo 'fecha'
-            // y devolviendo los datos (withInput) para que no tenga que escribirlos de nuevo.
-            return back()
-                ->withInput()
-                ->withErrors([
-                    'fecha' => 'Ya existe un reporte registrado para esta fecha (' . \Carbon\Carbon::parse($request->fecha)->format('d/m/Y') . '). Por favor elige otra o edita el existente.'
-                ]);
+            return back()->withInput()->withErrors([
+                'fecha' => 'Ya existe un reporte registrado para esta fecha.'
+            ]);
         }
 
-        // --- 2. VALIDACIÓN DE DATOS ---
         $request->validate([
             'fecha' => 'required|date',
             'visitantes' => 'required|integer|min:0',
@@ -122,13 +144,9 @@ class MetaAnualController extends Controller
             'kilos' => 'required|numeric|min:0',
         ]);
 
-        // --- 3. CÁLCULO ---
         $totalPersonas = $request->visitantes + $request->trabajadores;
-
-        // Evitar división por cero
         $perCapita = $totalPersonas > 0 ? ($request->kilos / $totalPersonas) : 0;
 
-        // --- 4. GUARDADO ---
         RegistroPerCapita::create([
             'instituto_id' => $institutoId,
             'fecha' => $request->fecha,
@@ -138,12 +156,88 @@ class MetaAnualController extends Controller
             'per_capita' => $perCapita,
         ]);
 
-        // --- 5. REDIRECCIÓN ---
         return redirect()->route('metaAnual.percapita.index')
             ->with('swal', [
                 'icon' => 'success',
                 'title' => '¡Registrado!',
                 'text' => 'El registro diario se ha guardado correctamente.'
             ]);
+    }
+
+    public function perCapitaEdit($id)
+    {
+        $registro = RegistroPerCapita::findOrFail($id);
+
+        if ($registro->instituto_id != auth()->user()->instituto_id) {
+            abort(403, 'No autorizado');
+        }
+
+        return view('metaAnual.perCapita.edit', compact('registro'));
+    }
+
+    public function perCapitaUpdate(Request $request, $id)
+    {
+        $registro = RegistroPerCapita::findOrFail($id);
+
+        if ($registro->instituto_id != auth()->user()->instituto_id) {
+            abort(403, 'No autorizado');
+        }
+
+        $request->validate([
+            'fecha' => 'required|date',
+            'visitantes' => 'required|integer|min:0',
+            'trabajadores' => 'required|integer|min:0',
+            'kilos' => 'required|numeric|min:0',
+        ]);
+
+        if ($request->fecha != $registro->fecha) {
+            $existe = RegistroPerCapita::where('instituto_id', $registro->instituto_id)
+                ->where('fecha', $request->fecha)
+                ->exists();
+            if ($existe) {
+                return back()->withInput()->withErrors(['fecha' => 'Ya existe otro registro con esta fecha.']);
+            }
+        }
+
+        $totalPersonas = $request->visitantes + $request->trabajadores;
+        $perCapita = $totalPersonas > 0 ? ($request->kilos / $totalPersonas) : 0;
+
+        $registro->update([
+            'fecha' => $request->fecha,
+            'visitantes' => $request->visitantes,
+            'trabajadores' => $request->trabajadores,
+            'kilos_residuos' => $request->kilos,
+            'per_capita' => $perCapita,
+        ]);
+
+        return redirect()->route('metaAnual.percapita.index')
+            ->with('swal', [
+                'icon' => 'success',
+                'title' => '¡Actualizado!',
+                'text' => 'El registro se ha actualizado correctamente.'
+            ]);
+    }
+
+    public function perCapitaDestroy($id)
+    {
+        $registro = RegistroPerCapita::findOrFail($id);
+
+        if ($registro->instituto_id != auth()->user()->instituto_id) {
+            abort(403, 'No autorizado');
+        }
+
+        $registro->delete();
+
+        return redirect()->route('metaAnual.percapita.index')
+            ->with('swal', [
+                'icon' => 'success',
+                'title' => '¡Eliminado!',
+                'text' => 'El registro ha sido eliminado.'
+            ]);
+    }
+
+    public function perCapitaShow($id)
+    {
+        return redirect()->route('metaAnual.percapita.index');
     }
 }
