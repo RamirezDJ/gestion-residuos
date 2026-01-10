@@ -10,14 +10,14 @@
 
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Registros de Parámetros Químicos') }}
+            {{ __('Registros de Parámetros Biológicos') }}
         </h2>
     </x-slot>
 
     <section class="bg-gray-50 dark:bg-gray-900 p-3 sm:p-5">
         <div class="px-4 pt-5 pb-5 mx-auto sm:max-w-xl md:max-w-full lg:max-w-screen-xl md:px-24 lg:px-8">
             <div
-                class="bg-white dark:bg-gray-800 relative shadow-md sm:rounded-lg overflow-hidden border-t-4 border-green-500">
+                class="bg-white dark:bg-gray-800 relative shadow-md sm:rounded-lg overflow-hidden border-t-4 border-purple-500">
 
                 <div
                     class="flex flex-col md:flex-row items-center justify-between space-y-3 md:space-y-0 md:space-x-4 p-4">
@@ -35,7 +35,7 @@
                                     </svg>
                                 </div>
                                 <input type="text" id="simple-search"
-                                    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-green-500 focus:border-green-500 block w-full pl-10 p-2"
+                                    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-purple-500 focus:border-purple-500 block w-full pl-10 p-2"
                                     placeholder="{{ $placeholderText }}">
                             </div>
                         </form>
@@ -44,13 +44,13 @@
                     <div
                         class="w-full md:w-auto flex flex-col md:flex-row space-y-2 md:space-y-0 items-stretch md:items-center justify-end md:space-x-3 flex-shrink-0">
 
-                        <a class="flex items-center justify-center text-white bg-green-600 hover:bg-green-700 focus:ring-4 focus:ring-green-300 font-medium rounded-lg text-sm px-4 py-2"
-                            href="{{ route('indicesCalidad.create', ['tipo' => 'quimicos']) }}">
+                        <a class="flex items-center justify-center text-white bg-indigo-700 hover:bg-indigo-800 focus:ring-4 focus:ring-indigo-300 font-medium rounded-lg text-sm px-4 py-2"
+                            href="{{ route('indicesCalidad.create', ['tipo' => 'biologicos']) }}">
                             <svg class="h-3.5 w-3.5 mr-2" fill="currentColor" viewbox="0 0 20 20">
                                 <path clip-rule="evenodd" fill-rule="evenodd"
                                     d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" />
                             </svg>
-                            Nuevo Químico
+                            Nuevo Biológico
                         </a>
 
                         <div class="flex items-center space-x-3 w-full md:w-auto">
@@ -67,13 +67,13 @@
                                 class="hidden z-10 w-44 bg-white rounded divide-y divide-gray-100 shadow">
                                 <ul class="py-1 text-sm text-gray-700" aria-labelledby="actionsDropdownButton">
                                     <li>
-                                        <a href="{{ route('indicesCalidad.show', ['tipo' => 'quimicos', 'tiempo' => 'general']) }}"
+                                        <a href="{{ route('indicesCalidad.show', ['tipo' => 'biologicos', 'tiempo' => 'general']) }}"
                                             class="block py-2 px-4 hover:bg-gray-100 {{ $tiempo == 'general' ? 'bg-gray-100 font-bold' : '' }}">
                                             Por Fecha
                                         </a>
                                     </li>
                                     <li>
-                                        <a href="{{ route('indicesCalidad.show', ['tipo' => 'quimicos', 'tiempo' => 'zonas_conteo']) }}"
+                                        <a href="{{ route('indicesCalidad.show', ['tipo' => 'biologicos', 'tiempo' => 'zonas_conteo']) }}"
                                             class="block py-2 px-4 hover:bg-gray-100 {{ $tiempo == 'zonas_conteo' ? 'bg-gray-100 font-bold' : '' }}">
                                             Por Punto
                                         </a>
@@ -85,21 +85,19 @@
                 </div>
 
                 <div class="overflow-x-auto p-5" id="table-container">
-                    @include('indices_calidad.partials.table-quimicos', ['registros' => $registros])
+                    @include('indices_calidad.partials.table-biologicos', ['registros' => $registros])
                 </div>
             </div>
         </div>
     </section>
-
     @push('js')
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
         <script>
             document.addEventListener('DOMContentLoaded', function() {
                 const searchInput = document.getElementById('simple-search');
-                const tipoInput = 'quimicos';
+                const tipoInput = 'biologicos'; 
                 const tiempoInput = '{{ $tiempo ?? 'general' }}';
-
                 if (searchInput) {
                     searchInput.addEventListener('input', function() {
                         const query = searchInput.value;
@@ -115,16 +113,14 @@
                             .catch(error => console.error('Error:', error));
                     });
                 }
-
                 @if (session('swal'))
                     Swal.fire({
                         icon: '{{ session('swal.icon') }}',
                         title: '{{ session('swal.title') }}',
                         text: '{{ session('swal.text') }}',
-                        confirmButtonColor: '#16A34A',
+                        confirmButtonColor: '#7C3AED', 
                     });
                 @endif
-
                 const Toast = Swal.mixin({
                     toast: true,
                     position: 'top-end',
@@ -134,16 +130,16 @@
                     didOpen: (toast) => {
                         toast.addEventListener('mouseenter', Swal.stopTimer)
                         toast.addEventListener('mouseleave', Swal.resumeTimer)
+                        const progress = toast.querySelector('.swal2-timer-progress-bar');
+                        if (progress) progress.style.backgroundColor = '#7C3AED';
                     }
                 });
-
                 @if (session('success'))
                     Toast.fire({
                         icon: 'success',
                         title: '{{ session('success') }}'
                     });
                 @endif
-
                 document.addEventListener('submit', function(e) {
                     if (e.target && e.target.classList.contains('form-eliminar')) {
                         e.preventDefault();
@@ -151,11 +147,11 @@
 
                         Swal.fire({
                             title: '¿Estás seguro?',
-                            text: "¡No podrás revertir esto! El registro químico será eliminado permanentemente.",
+                            text: "¡No podrás revertir esto! El registro biológico será eliminado permanentemente.",
                             icon: 'warning',
                             showCancelButton: true,
-                            confirmButtonColor: '#d33',
-                            cancelButtonColor: '#3085d6',
+                            confirmButtonColor: '#7C3AED',
+                            cancelButtonColor: '#6B7280',
                             confirmButtonText: 'Sí, eliminarlo',
                             cancelButtonText: 'Cancelar'
                         }).then((result) => {
@@ -165,6 +161,7 @@
                         });
                     }
                 });
+
             });
         </script>
     @endpush

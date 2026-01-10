@@ -18,11 +18,9 @@
                         </p>
                     </div>
 
-                    <form action="{{ route('indicesCalidad.store') }}" method="POST">
+                    <form action="{{ route('indicesCalidad.store') }}" method="POST" id="create-quimicos-form">
                         @csrf
                         <input type="hidden" name="tipo_registro" value="quimicos">
-
-                        {{-- 1. DATOS DE IDENTIFICACIÓN --}}
                         <div class="bg-gray-50 p-4 rounded-lg mb-6 border border-gray-200">
                             <h3 class="text-lg font-semibold text-gray-700 mb-4 border-b pb-2">Datos Generales</h3>
                             <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -44,7 +42,6 @@
                                         class="border-gray-300 focus:border-green-500 focus:ring-green-500 rounded-md shadow-sm w-full mt-1">
                                         <option value="" disabled selected>Selecciona...</option>
                                         <option value="Punta 1">Punta 1</option>
-                                        <option value="Cisterna">Cisterna</option>
                                         <option value="Punto 2">Punto 2</option>
                                         <option value="Punto 3">Punto 3</option>
                                         <option value="Punto 4">Punto 4</option>
@@ -58,11 +55,9 @@
                             </div>
                         </div>
 
-                        {{-- 2. BLOQUE VERDE (QUÍMICOS) --}}
                         <div class="bg-green-50 p-6 rounded-lg border border-green-200 mb-6">
                             <div class="flex items-center mb-6">
                                 <div class="p-2 bg-green-100 rounded-full mr-3 text-green-600">
-                                    {{-- Icono Matraz --}}
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none"
                                         viewBox="0 0 24 24" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -72,53 +67,95 @@
                                 <h3 class="text-xl font-bold text-green-800">Parámetros Químicos</h3>
                             </div>
 
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-700">pH (Unidades)</label>
+                                    <label class="block text-sm font-medium text-gray-700">pH</label>
                                     <input type="number" step="0.01" name="ph"
-                                        class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500">
+                                        class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-green-500">
                                 </div>
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-700">Dureza (mg/L)</label>
-                                    <input type="number" step="0.01" name="dureza"
-                                        class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500">
+                                    <label class="block text-sm font-medium text-gray-700">Oxígeno Disuelto
+                                        (mg/L)</label>
+                                    <input type="number" step="0.01" name="oxigeno_disuelto_ppm"
+                                        class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-green-500">
                                 </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Demanda Bioquímica
+                                        (DBO)</label>
+                                    <input type="number" step="0.01" name="dbo"
+                                        class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-green-500">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Demanda Química (DQO)</label>
+                                    <input type="number" step="0.01" name="dqo"
+                                        class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-green-500">
+                                </div>
+
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700">Nitratos (mg/L)</label>
                                     <input type="number" step="0.01" name="nitratos"
-                                        class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500">
+                                        class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-green-500">
                                 </div>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700">Nitritos (mg/L)</label>
                                     <input type="number" step="0.01" name="nitritos"
-                                        class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500">
+                                        class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-green-500">
                                 </div>
                                 <div>
-                                    <label class="block text-sm font-medium text-gray-700">DQO (Demanda Química
-                                        Oxígeno)</label>
-                                    <input type="number" step="0.01" name="dqo"
-                                        class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500">
+                                    <label class="block text-sm font-medium text-gray-700">Fosfato (mg/L)</label>
+                                    <input type="number" step="0.01" name="fosfatos"
+                                        class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-green-500">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Cloro Libre (mg/L)</label>
+                                    <input type="number" step="0.01" name="cloro_libre"
+                                        class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-green-500">
                                 </div>
                             </div>
-                        </div>
 
-                        {{-- 3. OBSERVACIONES --}}
-                        <div class="mt-6">
-                            <label class="block font-medium text-sm text-gray-700">Observaciones</label>
-                            <textarea name="observaciones" rows="2"
-                                class="border-gray-300 focus:border-green-500 focus:ring-green-500 rounded-md shadow-sm w-full mt-1"></textarea>
-                        </div>
+                            <div class="mt-6">
+                                <label class="block font-medium text-sm text-gray-700">Observaciones</label>
+                                <textarea name="observaciones" rows="2"
+                                    class="border-gray-300 focus:border-green-500 focus:ring-green-500 rounded-md shadow-sm w-full mt-1"></textarea>
+                            </div>
 
-                        <div class="flex items-center justify-end mt-6 gap-4">
-                            <a href="{{ route('indicesCalidad.index') }}"
-                                class="text-gray-600 hover:text-gray-900 underline text-sm">Cancelar</a>
-                            <button type="submit"
-                                class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded-lg shadow transition">Guardar
-                                Químicos</button>
-                        </div>
+                            <div class="flex items-center justify-end mt-6 gap-4">
+                                <button type="submit"
+                                    class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded-lg shadow transition">
+                                    Guardar Químicos
+                                </button>
+                            </div>
                     </form>
                 </div>
             </div>
         </div>
     </div>
+    @push('js')
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                const createForm = document.getElementById('create-quimicos-form');
+
+                createForm.addEventListener('submit', function(event) {
+                    event.preventDefault();
+
+                    Swal.fire({
+                        title: '¿Guardar Registro?',
+                        html: "Estás a punto de crear un nuevo registro químico.<br><b>Verifica que los datos sean correctos.</b>",
+                        icon: 'question',
+                        showCancelButton: true,
+                        confirmButtonColor: '#16A34A',
+                        cancelButtonColor: '#6B7280',
+                        confirmButtonText: 'Sí, guardar',
+                        cancelButtonText: 'Cancelar'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            createForm.submit();
+                        }
+                    });
+                });
+            });
+        </script>
+    @endpush
+
 </x-app-layout>

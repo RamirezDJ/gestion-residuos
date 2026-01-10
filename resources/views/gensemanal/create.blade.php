@@ -200,36 +200,26 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // --- 1. REFERENCIAS A ELEMENTOS ---
-            // Elementos del formulario
+
             const botonGenerar = document.getElementById('generar-dias');
             const container = document.getElementById('dias-container');
             const template = document.getElementById('dia-template');
             const fechaInicialInput = document.getElementById('datepicker_inicial');
             const fechaFinalInput = document.getElementById('datepicker_final');
-
-            // Nuevos elementos para el "wizard" (asistente)
             const controlesNavegacion = document.getElementById('controles-navegacion');
             const botonAnterior = document.getElementById('boton-anterior');
             const botonSiguiente = document.getElementById('boton-siguiente');
             const seccionSubmitFinal = document.getElementById('seccion-submit-final');
-
-            // --- 2. VARIABLES DE ESTADO ---
             let pasoActual = 0;
-            let diasGenerados = []; // Un array para guardar los divs de los días
+            let diasGenerados = []; 
 
-            // --- 3. BOTÓN PRINCIPAL: GENERAR DÍAS (LÓGICA ACTUALIZADA) ---
             botonGenerar.addEventListener('click', function() {
-                // Limpiamos todo visualmente
                 container.innerHTML = '';
                 diasGenerados = [];
                 pasoActual = 0;
 
-                // --- A. Validaciones Originales ---
                 const fechaInicialStr = parsearFecha(fechaInicialInput.value);
                 const fechaFinalStr = parsearFecha(fechaFinalInput.value);
-
-                // NUEVO: Capturar el turno para verificar duplicados
                 const turnoSelect = document.querySelector('select[name="turno"]');
                 const turno = turnoSelect.value;
 
@@ -238,7 +228,6 @@
                     return;
                 }
 
-                // Validación de turno
                 if (!turno || turno === '-- Seleccione un turno --') {
                     alert('Por favor, seleccione un turno antes de generar.');
                     return;
@@ -260,19 +249,14 @@
                     return;
                 }
 
-                // Deshabilitamos el botón para evitar doble click
                 botonGenerar.disabled = true;
                 const textoOriginalBtn = botonGenerar.innerText;
                 botonGenerar.innerText = 'Verificando...';
-
-                // --- B. PETICIÓN AJAX (Verificar Duplicados) ---
                 fetch(
                         `{{ route('gensemanal.checkWeek') }}?inicio=${fechaInicialStr}&final=${fechaFinalStr}&turno=${turno}`
                         )
                     .then(response => response.json())
                     .then(data => {
-
-                        // CASO 1: YA EXISTE REGISTRO
                         if (data.exists) {
                             Swal.fire({
                                 icon: 'warning',
@@ -282,23 +266,19 @@
                                 confirmButtonText: 'Entendido'
                             }).then((result) => {
                                 if (result.isConfirmed) {
-                                    window.location.reload(); // Recarga la página al confirmar
+                                    window.location.reload(); 
                                 }
                             });
 
                             botonGenerar.innerText = textoOriginalBtn;
                             botonGenerar.disabled = false;
-                            return; // Detenemos la ejecución
+                            return; 
                         }
 
-                        // CASO 2: NO EXISTE, GENERAMOS LA TABLA (Tu lógica original)
                         let fechaActual = new Date(fechaInicial);
 
                         while (fechaActual <= fechaFinal) {
-                            // Clonamos la plantilla
                             const diaClonado = template.content.cloneNode(true);
-
-                            // Formateamos fechas
                             const fechaISO = fechaActual.toISOString().split('T')[0];
                             const fechaVisible = fechaActual.toLocaleDateString('es-ES', {
                                 day: '2-digit',
@@ -308,12 +288,8 @@
                             const diaSemana = fechaActual.toLocaleDateString('es-ES', {
                                 weekday: 'long'
                             });
-
-                            // Actualizamos el título del día
                             diaClonado.querySelector('.dia-titulo').textContent =
                                 `Registro del ${diaSemana}, ${fechaVisible}`;
-
-                            // Actualizamos el 'name' de todos los inputs en el clon
                             const inputs = diaClonado.querySelectorAll('input');
                             inputs.forEach(input => {
                                 input.name = input.name.replace(
@@ -321,12 +297,8 @@
                                     `valor_kg[${fechaISO}]`
                                 );
                             });
-
-                            // Añadimos el día clonado al DOM
                             container.appendChild(diaClonado);
                             diasGenerados.push(container.lastElementChild);
-
-                            // Avanzamos al siguiente día
                             fechaActual.setDate(fechaActual.getDate() + 1);
                         }
 
@@ -366,8 +338,6 @@
                         botonGenerar.disabled = false;
                     });
             });
-
-            // --- 5. EVENT LISTENERS PARA NAVEGACIÓN ---
             botonSiguiente.addEventListener('click', function() {
                 if (pasoActual < diasGenerados.length - 1) {
                     pasoActual++;
@@ -381,30 +351,17 @@
                     mostrarPaso(pasoActual);
                 }
             });
-
-            // --- 6. FUNCIÓN PRINCIPAL DEL WIZARD ---
             function mostrarPaso(indice) {
-                // Ocultamos todos los días
                 diasGenerados.forEach((dia, i) => {
                     dia.style.display = (i === indice) ? 'block' : 'none';
                 });
-
-                // Actualizamos visibilidad de botones
-                // Ocultar "Anterior" si es el primer paso
                 botonAnterior.style.display = (indice === 0) ? 'none' : 'inline-block';
-
-                // Ocultar "Siguiente" si es el último paso
                 botonSiguiente.style.display = (indice === diasGenerados.length - 1) ? 'none' : 'inline-block';
-
-                // Mostramos el botón de "Crear Registro" SÓLO en el último paso
                 seccionSubmitFinal.style.display = (indice === diasGenerados.length - 1) ? 'flex' : 'none';
             }
-
-            // --- 7. FUNCIÓN HELPER (sin cambios) ---
             function parsearFecha(fechaStr) {
                 const partes = fechaStr.split('/');
                 if (partes.length === 3) {
-                    // [dd, mm, yyyy] -> yyyy-mm-dd
                     return `${partes[2]}-${partes[1]}-${partes[0]}`;
                 }
                 return null;
@@ -412,28 +369,19 @@
         });
 
         const createForm = document.getElementById('create-week-form');
-
-        // 2. Escuchamos el evento 'submit'
         createForm.addEventListener('submit', function(event) {
-
-            // 3. Prevenimos el envío automático
             event.preventDefault();
-
-            // 4. Mostramos la confirmación de SweetAlert
             Swal.fire({
                 title: '¿Guardar?',
-                // Usamos html para el salto de línea
                 html: "Estas a puntos de crear un nuevo registro.<br><b>¡La fechas no podrá modificarse después!</b>",
                 icon: 'question',
                 showCancelButton: true,
                 confirmButtonColor: '#3085d6',
-                cancelButtonColor: '#6c757d', // Un gris para cancelar
+                cancelButtonColor: '#6c757d',
                 confirmButtonText: 'Sí, crear registro',
                 cancelButtonText: 'Cancelar'
             }).then((result) => {
-                // 5. Si el usuario confirma...
                 if (result.isConfirmed) {
-                    // ...enviamos el formulario.
                     createForm.submit();
                 }
             });

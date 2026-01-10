@@ -1,8 +1,7 @@
 <x-app-layout>
 
-    {{-- 1. CÓDIGO PHP MOVIDO AQUÍ ARRIBA --}}
     @php
-        $placeholderText = 'Buscar...'; // Texto por defecto
+        $placeholderText = 'Buscar...'; 
         if ($tiempo == 'zonas_areas') {
             $placeholderText = 'Buscar por fecha, turno, zona o área...';
         } elseif ($tiempo == 'zonas_conteo') {
@@ -31,8 +30,6 @@
                                             clip-rule="evenodd" />
                                     </svg>
                                 </div>
-
-                                {{-- 2. INPUT CON CLASES RESTAURADAS Y PLACEHOLDER DINÁMICO --}}
                                 <input type="text" id="simple-search"
                                     class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full pl-10 p-2 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
                                     placeholder="{{ $placeholderText }}" required="">
@@ -73,7 +70,7 @@
                                             @click.prevent="tiempo = 'general'; $nextTick(() => $refs.form.submit())"
                                             :class="{ 'bg-gray-200 dark:bg-gray-600': tiempo === 'general' }"
                                             class="block py-2 px-4 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white">General
-                                            (por Semana)</a> {{-- <-- Texto Corregido --}}
+                                            (por Semana)</a> 
                                     </li>
                                     <li>
                                         <a href="#"
@@ -130,17 +127,10 @@
                 });
             });
             document.addEventListener('submit', function(event) {
-
-                // 1. Verificamos si el formulario que se envió tiene nuestra clase
                 if (event.target.classList.contains('delete-week-form')) {
 
-                    // 2. Prevenimos el envío inmediato
                     event.preventDefault();
-
-                    // 3. Guardamos 'this' (el formulario) en una variable
                     const form = event.target;
-
-                    // 4. Mostramos el SweetAlert (¡como el tuyo!)
                     Swal.fire({
                         title: '¿Estás seguro?',
                         text: "Vas a eliminar TODOS los registros de esta semana. ¡Esta acción no se puede deshacer!",
@@ -151,7 +141,6 @@
                         confirmButtonText: 'Sí, eliminar semana',
                         cancelButtonText: 'Cancelar'
                     }).then((result) => {
-                        // 5. Si el usuario confirma, enviamos ESE formulario
                         if (result.isConfirmed) {
                             form.submit();
                         }

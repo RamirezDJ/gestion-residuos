@@ -11,7 +11,6 @@
         @foreach ($registros as $registro)
             <tr class="border-b dark:border-gray-900">
 
-                {{-- Celdas de datos (sin cambios) --}}
                 <td class="px-4 py-3">
                     {{ $registro->fecha_inicio }}
                 </td>
@@ -22,10 +21,8 @@
                     {{ number_format($registro->total_kilos_semana, 2) }}
                 </td>
 
-                {{-- Celda de Acciones --}}
                 <td class="px-4 py-3 flex items-center justify-center gap-2">
 
-                    {{-- Enlaces (sin cambios) --}}
                     <a href="{{ route('gensemanal.showAll', ['fecha' => $registro->fecha_inicio]) }}">
                         <i class="fa-solid fa-eye"></i>
                     </a>
@@ -34,10 +31,9 @@
                     </a>
 
                     @can('Eliminar Registros')
-                        {{-- FORMULARIO MODIFICADO --}}
-                        <form {{-- 1. AÑADIMOS UNA CLASE --}} class="delete-week-form"
+                        <form class="delete-week-form"
                             action="{{ route('gensemanal.destroyWeek', ['fecha' => $registro->fecha_inicio]) }}"
-                            method="POST" {{-- 2. QUITAMOS EL onsubmit="..." --}} style="display: inline;">
+                            method="POST" style="display: inline;">
 
                             @csrf
                             @method('DELETE')

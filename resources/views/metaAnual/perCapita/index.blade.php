@@ -67,7 +67,6 @@
     </div>
 
     {{-- 4. SCRIPT PARA DIBUJAR LA GRÁFICA --}}
-    {{-- Si ya tienes ApexCharts en app.js, puedes quitar la línea del CDN --}}
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
 
     <script>

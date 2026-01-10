@@ -22,9 +22,8 @@
                 <div
                     class="flex flex-col md:flex-row items-center justify-between space-y-3 md:space-y-0 md:space-x-4 p-4">
 
-                    {{-- BUSCADOR --}}
                     <div class="w-full md:w-1/2">
-                        <form class="flex items-center">
+                        <form class="flex items-center" onsubmit="return false;">
                             <label for="simple-search" class="sr-only">Buscar</label>
                             <div class="relative w-full">
                                 <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
@@ -42,10 +41,9 @@
                         </form>
                     </div>
 
-                    <div x-data="{ tiempo: '{{ $tiempo }}' }"
+                    <div
                         class="w-full md:w-auto flex flex-col md:flex-row space-y-2 md:space-y-0 items-stretch md:items-center justify-end md:space-x-3 flex-shrink-0">
 
-                        {{-- BOTÓN NUEVO REGISTRO (AZUL) --}}
                         <a class="flex items-center justify-center text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-4 py-2"
                             href="{{ route('indicesCalidad.create', ['tipo' => 'fisicos']) }}">
                             <svg class="h-3.5 w-3.5 mr-2" fill="currentColor" viewbox="0 0 20 20">
@@ -55,7 +53,6 @@
                             Nuevo Físico
                         </a>
 
-                        {{-- FILTRO --}}
                         <div class="flex items-center space-x-3 w-full md:w-auto">
                             <button id="actionsDropdownButton" data-dropdown-toggle="actionsDropdown"
                                 class="w-full md:w-auto flex items-center justify-center py-2 px-4 text-sm font-medium text-gray-900 bg-white rounded-lg border border-gray-200 hover:bg-gray-100 focus:ring-4 focus:ring-gray-200"
@@ -87,7 +84,6 @@
                     </div>
                 </div>
 
-                {{-- CONTENEDOR DE LA TABLA --}}
                 <div class="overflow-x-auto p-5" id="table-container">
                     @include('indices_calidad.partials.table-fisicos', ['registros' => $registros])
                 </div>
@@ -95,28 +91,80 @@
         </div>
     </section>
 
-    {{-- SCRIPTS PARA BUSQUEDA --}}
     @push('js')
+        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
         <script>
             document.addEventListener('DOMContentLoaded', function() {
                 const searchInput = document.getElementById('simple-search');
-                
                 const tipoInput = 'fisicos';
-                const tiempoInput = '{{ $tiempo }}';
+                const tiempoInput = '{{ $tiempo ?? 'general' }}';
 
-                searchInput.addEventListener('input', function() {
-                    const query = searchInput.value;
-                    
-                    fetch(`{{ route('indicesCalidad.search') }}?query=${query}&tiempo=${tiempoInput}&tipo=${tipoInput}`, {
-                            headers: {
-                                'X-Requested-With': 'XMLHttpRequest'
-                            }
-                        })
-                        .then(response => response.text())
-                        .then(html => {
-                            document.getElementById('table-container').innerHTML = html;
-                        });
+                if (searchInput) {
+                    searchInput.addEventListener('input', function() {
+                        const query = searchInput.value;
+                        fetch(`{{ route('indicesCalidad.search') }}?query=${query}&tiempo=${tiempoInput}&tipo=${tipoInput}`, {
+                                headers: {
+                                    'X-Requested-With': 'XMLHttpRequest'
+                                }
+                            })
+                            .then(response => response.text())
+                            .then(html => {
+                                document.getElementById('table-container').innerHTML = html;
+                            })
+                            .catch(error => console.error('Error:', error));
+                    });
+                }
+
+                @if (session('swal'))
+                    Swal.fire({
+                        icon: '{{ session('swal.icon') }}',
+                        title: '{{ session('swal.title') }}',
+                        text: '{{ session('swal.text') }}',
+                        confirmButtonColor: '#3085d6',
+                    });
+                @endif
+
+                const Toast = Swal.mixin({
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 3000,
+                    timerProgressBar: true,
+                    didOpen: (toast) => {
+                        toast.addEventListener('mouseenter', Swal.stopTimer)
+                        toast.addEventListener('mouseleave', Swal.resumeTimer)
+                    }
                 });
+
+                @if (session('success'))
+                    Toast.fire({
+                        icon: 'success',
+                        title: '{{ session('success') }}'
+                    });
+                @endif
+                document.addEventListener('submit', function(e) {
+                    if (e.target && e.target.classList.contains('form-eliminar')) {
+                        e.preventDefault();
+                        const form = e.target;
+
+                        Swal.fire({
+                            title: '¿Estás seguro?',
+                            text: "¡No podrás revertir esto! El registro será eliminado permanentemente.",
+                            icon: 'warning',
+                            showCancelButton: true,
+                            confirmButtonColor: '#d33',
+                            cancelButtonColor: '#3085d6',
+                            confirmButtonText: 'Sí, eliminarlo',
+                            cancelButtonText: 'Cancelar'
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                form.submit();
+                            }
+                        });
+                    }
+                });
+
             });
         </script>
     @endpush

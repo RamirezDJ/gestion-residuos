@@ -6,7 +6,6 @@
             <th scope="col" class="px-4 py-3">Area asignada</th>
             <th scope="col" class="px-4 py-3">Turno</th>
             <th scope="col" class="px-4 py-3">Total generado</th>
-            {{-- SE ELIMINÓ LA COLUMNA ACCIONES AQUÍ --}}
         </tr>
     </thead>
     <tbody class="text-center">
@@ -22,7 +21,6 @@
                 <td class="px-4 py-3">
                     {{ $registro->total_kilos_area }} kg
                 </td>
-                {{-- SE ELIMINÓ LA CELDA DE BOTONES (EDITAR/VER) AQUÍ --}}
             </tr>
         @endforeach
     </tbody>

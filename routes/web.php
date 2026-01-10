@@ -78,6 +78,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
 
     Route::get('/indices-calidad/create/{tipo}', [IndicesCalidadController::class, 'create'])->name('indicesCalidad.create');
     Route::get('/indices-calidad/ver/{tipo}', [IndicesCalidadController::class, 'show'])->name('indicesCalidad.show');
+    Route::get('/indices-calidad/detalle/{id}', [IndicesCalidadController::class, 'showDetail'])->name('indicesCalidad.showDetail');
     Route::get('/indices-calidad-search', [IndicesCalidadController::class, 'search'])->name('indicesCalidad.search');
     Route::get('/indices-calidad', [IndicesCalidadController::class, 'index'])->name('indicesCalidad.index');
     Route::resource('indices-calidad', IndicesCalidadController::class)->except(['index', 'show', 'create'])->names('indicesCalidad');

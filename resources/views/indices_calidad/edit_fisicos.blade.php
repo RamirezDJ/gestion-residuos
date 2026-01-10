@@ -5,7 +5,7 @@
 
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Nuevo Registro de Parámetros Físicos') }}
+            {{ __('Editar Registro de Parámetros Físicos') }}
         </h2>
     </x-slot>
 
@@ -14,16 +14,25 @@
             <div class="bg-white overflow-hidden shadow-xl sm:rounded-lg">
                 <div class="p-6 lg:p-8 bg-white border-b border-gray-200">
 
-                    <div class="mb-6">
-                        <h1 class="text-2xl font-medium text-gray-900">Captura de Datos Físicos</h1>
-                        <p class="text-gray-500 mt-1">
-                            Completa la información de la bitácora. Estás registrando:
-                            <span class="font-bold text-blue-600">PARÁMETROS FÍSICOS</span>
-                        </p>
+                    <div class="mb-6 flex justify-between items-center">
+                        <div>
+                            <h1 class="text-2xl font-medium text-gray-900">Edición de Datos</h1>
+                            <p class="text-gray-500 mt-1">
+                                Editando registro físico del: <span
+                                    class="font-bold">{{ $registro->fecha_muestreo }}</span>
+                            </p>
+                        </div>
+                        <a href="{{ route('indicesCalidad.show', ['tipo' => 'fisicos']) }}"
+                            class="text-gray-500 hover:text-gray-700">
+                            <i class="fa-solid fa-arrow-left mr-2"></i> Volver
+                        </a>
                     </div>
 
-                    <form action="{{ route('indicesCalidad.store') }}" method="POST" id="create-fisicos-form">
+                    <form action="{{ route('indicesCalidad.update', $registro->id) }}" method="POST"
+                        id="edit-fisicos-form">
                         @csrf
+                        @method('PUT')
+
                         <input type="hidden" name="tipo_registro" value="fisicos">
 
                         <div class="bg-gray-50 p-4 rounded-lg mb-6 border border-gray-200">
@@ -33,29 +42,31 @@
                                     <label class="block font-medium text-sm text-gray-700">Fecha</label>
                                     <input type="date" name="fecha_muestreo" required
                                         class="border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm w-full mt-1"
-                                        value="{{ date('Y-m-d') }}">
+                                        value="{{ old('fecha_muestreo', $registro->fecha_muestreo) }}">
                                 </div>
                                 <div>
                                     <label class="block font-medium text-sm text-gray-700">Hora</label>
                                     <input type="time" name="hora_muestreo" required
                                         class="border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm w-full mt-1"
-                                        value="{{ date('H:i') }}">
+                                        value="{{ old('hora_muestreo', $registro->hora_muestreo) }}">
                                 </div>
                                 <div>
                                     <label class="block font-medium text-sm text-gray-700">Punto de Muestreo</label>
                                     <select name="punto_muestreo" required
                                         class="border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm w-full mt-1">
-                                        <option value="" disabled selected>Selecciona...</option>
-                                        <option value="Punta 1">Punta 1</option>
-                                        <option value="Punto 2">Punto 2</option>
-                                        <option value="Punto 3">Punto 3</option>
-                                        <option value="Punto 4">Punto 4</option>
+                                        @foreach (['Punta 1', 'Punto 2', 'Punto 3', 'Punto 4'] as $punto)
+                                            <option value="{{ $punto }}"
+                                                {{ old('punto_muestreo', $registro->punto_muestreo) == $punto ? 'selected' : '' }}>
+                                                {{ $punto }}
+                                            </option>
+                                        @endforeach
                                     </select>
                                 </div>
                                 <div>
                                     <label class="block font-medium text-sm text-gray-700">No. Muestra</label>
-                                    <input type="number" name="numero_muestra" min="1" value="1" required
-                                        class="border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm w-full mt-1">
+                                    <input type="number" name="numero_muestra" min="1" required
+                                        class="border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm w-full mt-1"
+                                        value="{{ old('numero_muestra', $registro->numero_muestra) }}">
                                 </div>
                             </div>
                         </div>
@@ -63,11 +74,7 @@
                         <div class="bg-blue-50 p-6 rounded-lg border border-blue-200 mb-6">
                             <div class="flex items-center mb-6">
                                 <div class="p-2 bg-blue-100 rounded-full mr-3 text-blue-600">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none"
-                                        viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
-                                    </svg>
+                                    <i class="fa-solid fa-flask text-xl"></i>
                                 </div>
                                 <h3 class="text-xl font-bold text-blue-800">Parámetros Físicos</h3>
                             </div>
@@ -77,59 +84,67 @@
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700">Temperatura (°C)</label>
                                     <input type="number" step="0.1" name="temperatura"
-                                        class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500">
+                                        class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500"
+                                        value="{{ old('temperatura', optional($registro->fisicos)->temperatura) }}">
                                 </div>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700">Color</label>
                                     <input type="text" name="color"
-                                        class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500">
+                                        class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500"
+                                        value="{{ old('color', optional($registro->fisicos)->color) }}">
                                 </div>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700">Olor</label>
                                     <input type="text" name="olor"
-                                        class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500">
+                                        class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500"
+                                        value="{{ old('olor', optional($registro->fisicos)->olor) }}">
                                 </div>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700">Sabor</label>
                                     <input type="text" name="sabor"
-                                        class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500">
+                                        class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500"
+                                        value="{{ old('sabor', optional($registro->fisicos)->sabor) }}">
                                 </div>
 
                                 {{-- Fila 2 --}}
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700">Turbidez (UNT)</label>
                                     <input type="number" step="0.01" name="turbidez"
-                                        class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500">
+                                        class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500"
+                                        value="{{ old('turbidez', optional($registro->fisicos)->turbidez) }}">
                                 </div>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700">Conductividad (ms/cm)</label>
                                     <input type="number" step="0.01" name="conductividad_electrica"
-                                        class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500">
+                                        class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500"
+                                        value="{{ old('conductividad_electrica', optional($registro->fisicos)->conductividad_electrica) }}">
                                 </div>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700">Sólidos Disueltos
                                         (mg/L)</label>
                                     <input type="number" step="0.01" name="solidos_disueltos"
-                                        class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500">
+                                        class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500"
+                                        value="{{ old('solidos_disueltos', optional($registro->fisicos)->solidos_disueltos) }}">
                                 </div>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700">Sólidos en Suspensión
                                         (mg/L)</label>
                                     <input type="number" step="0.01" name="solidos_suspension"
-                                        class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500">
+                                        class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500"
+                                        value="{{ old('solidos_suspension', optional($registro->fisicos)->solidos_suspension) }}">
                                 </div>
                             </div>
 
                             <div class="mt-6">
                                 <label class="block font-medium text-sm text-gray-700">Observaciones</label>
                                 <textarea name="observaciones" rows="2"
-                                    class="border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm w-full mt-1"></textarea>
+                                    class="border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded-md shadow-sm w-full mt-1">{{ old('observaciones', $registro->observaciones) }}</textarea>
                             </div>
 
                             <div class="flex items-center justify-end mt-6 gap-4">
                                 <button type="submit"
                                     class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg shadow transition">
-                                    Guardar Físicos
+                                    Actualizar Registro
                                 </button>
                             </div>
                         </div>
@@ -142,23 +157,23 @@
     @push('js')
         <script>
             document.addEventListener('DOMContentLoaded', function() {
-                const createForm = document.getElementById('create-fisicos-form');
+                const editForm = document.getElementById('edit-fisicos-form');
 
-                createForm.addEventListener('submit', function(event) {
+                editForm.addEventListener('submit', function(event) {
                     event.preventDefault();
 
                     Swal.fire({
-                        title: '¿Guardar Registro?',
-                        html: "Estás a punto de crear un nuevo registro físico.<br><b>Verifica que los datos sean correctos.</b>",
-                        icon: 'question',
+                        title: '¿Guardar Cambios?',
+                        text: "Se actualizará la información de este registro.",
+                        icon: 'warning',
                         showCancelButton: true,
                         confirmButtonColor: '#2563EB',
                         cancelButtonColor: '#6B7280',
-                        confirmButtonText: 'Sí, guardar',
+                        confirmButtonText: 'Sí, actualizar',
                         cancelButtonText: 'Cancelar'
                     }).then((result) => {
                         if (result.isConfirmed) {
-                            createForm.submit();
+                            editForm.submit();
                         }
                     });
                 });
