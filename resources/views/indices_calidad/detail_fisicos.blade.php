@@ -64,65 +64,64 @@
                             @if ($registro->fisicos)
                                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
 
-                                    <div class="bg-gray-50 p-4 rounded-lg border border-gray-100">
+                                    <div class="bg-blue-50 p-4 rounded-lg border border-blue-100">
                                         <p class="text-sm font-medium text-gray-500">Temperatura</p>
-                                        <p class="text-2xl font-bold text-gray-800">
+                                        <p class="text-2xl font-bold text-blue-800">
                                             {{ $registro->fisicos->temperatura ?? '--' }}
                                             <span class="text-sm text-gray-400 font-normal">°C</span>
                                         </p>
                                     </div>
 
-                                    <div class="bg-gray-50 p-4 rounded-lg border border-gray-100">
+                                    <div class="bg-blue-50 p-4 rounded-lg border border-blue-100">
                                         <p class="text-sm font-medium text-gray-500">Conductividad</p>
-                                        <p class="text-2xl font-bold text-gray-800">
+                                        <p class="text-2xl font-bold text-blue-800">
                                             {{ $registro->fisicos->conductividad_electrica ?? '--' }}
                                             <span class="text-sm text-gray-400 font-normal">µS/cm</span>
                                         </p>
                                     </div>
 
-                                    <div class="bg-gray-50 p-4 rounded-lg border border-gray-100">
+                                    <div class="bg-blue-50 p-4 rounded-lg border border-blue-100">
                                         <p class="text-sm font-medium text-gray-500">Turbidez</p>
-                                        <p class="text-2xl font-bold text-gray-800">
+                                        <p class="text-2xl font-bold text-blue-800">
                                             {{ $registro->fisicos->turbidez ?? '--' }}
                                             <span class="text-sm text-gray-400 font-normal">NTU</span>
                                         </p>
                                     </div>
 
-                                    <div class="bg-gray-50 p-4 rounded-lg border border-gray-100">
+                                    <div class="bg-blue-50 p-4 rounded-lg border border-blue-100">
                                         <p class="text-sm font-medium text-gray-500">Olor</p>
-                                        <p class="text-lg font-semibold text-gray-800 break-words mt-1">
+                                        <p class="text-lg font-semibold text-blue-800 break-words mt-1">
                                             {{ $registro->fisicos->olor ?? '--' }}
                                         </p>
                                     </div>
 
-                                    <div class="bg-gray-50 p-4 rounded-lg border border-gray-100">
+                                    <div class="bg-blue-50 p-4 rounded-lg border border-blue-100">
                                         <p class="text-sm font-medium text-gray-500">Sabor</p>
-                                        <p class="text-lg font-semibold text-gray-800 break-words mt-1">
+                                        <p class="text-lg font-semibold text-blue-800 break-words mt-1">
                                             {{ $registro->fisicos->sabor ?? '--' }}
                                         </p>
                                     </div>
 
-                                    <div
-                                        class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6 border border-gray-100">
+                                    <div class="bg-blue-50 p-4 rounded-lg border border-blue-100">
                                         <dt class="text-sm font-medium text-gray-500 truncate">
                                             Color
                                         </dt>
-                                        <p class="text-lg font-semibold text-gray-800 break-words mt-1">
+                                        <p class="text-lg font-semibold text-blue-800 break-words mt-1">
                                             {{ $registro->fisicos->color ?? '--' }}
                                         </p>
                                     </div>
 
-                                    <div class="bg-gray-50 p-4 rounded-lg border border-gray-100">
+                                    <div class="bg-blue-50 p-4 rounded-lg border border-blue-100">
                                         <p class="text-sm font-medium text-gray-500">Sólidos Disueltos</p>
-                                        <p class="text-2xl font-bold text-gray-800">
+                                        <p class="text-2xl font-bold text-blue-800">
                                             {{ $registro->fisicos->solidos_disueltos ?? '--' }}
                                             <span class="text-sm text-gray-400 font-normal">mg/L</span>
                                         </p>
                                     </div>
 
-                                    <div class="bg-gray-50 p-4 rounded-lg border border-gray-100">
+                                    <div class="bg-blue-50 p-4 rounded-lg border border-blue-100">
                                         <p class="text-sm font-medium text-gray-500">Sólidos en Suspensión</p>
-                                        <p class="text-2xl font-bold text-gray-800">
+                                        <p class="text-2xl font-bold text-blue-800">
                                             {{ $registro->fisicos->solidos_suspension ?? '--' }}
                                             <span class="text-sm text-gray-400 font-normal">mg/L</span>
                                         </p>
@@ -132,8 +131,7 @@
 
                                 <div class="mt-8 border-t pt-4">
                                     <h4 class="text-sm font-medium text-gray-700 mb-2">Observaciones Generales</h4>
-                                    <div
-                                        class="p-4 bg-yellow-50 rounded-md border border-yellow-100 text-sm text-yellow-800">
+                                    <div class="p-4 bg-blue-50 rounded-md border border-blue-100 text-sm text-blue-800">
                                         {{ $registro->observaciones ?? 'Sin observaciones registradas.' }}
                                     </div>
                                 </div>

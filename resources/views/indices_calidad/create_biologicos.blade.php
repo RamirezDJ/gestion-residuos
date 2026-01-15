@@ -98,10 +98,6 @@
                             </div>
 
                             <div class="flex items-center justify-end mt-6 gap-4">
-                                <a href="{{ route('indicesCalidad.show', 'biologicos') }}"
-                                    class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2 px-6 rounded-lg transition">
-                                    Cancelar
-                                </a>
                                 <button type="submit"
                                     class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-6 rounded-lg shadow transition">
                                     Guardar Biológicos
